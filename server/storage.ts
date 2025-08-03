@@ -25,6 +25,7 @@ export interface IStorage {
   
   // Feedback methods
   getFeedbackByComplaint(complaintId: string): Promise<Feedback | undefined>;
+  getAllFeedback(): Promise<Feedback[]>;
   createFeedback(feedback: InsertFeedback & { citizenId: string }): Promise<Feedback>;
   
   // Analytics methods
@@ -223,6 +224,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.feedbacks.values()).find(
       (feedback) => feedback.complaintId === complaintId
     );
+  }
+
+  async getAllFeedback(): Promise<Feedback[]> {
+    return Array.from(this.feedbacks.values());
   }
 
   async createFeedback(feedbackData: InsertFeedback & { citizenId: string }): Promise<Feedback> {

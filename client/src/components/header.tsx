@@ -30,6 +30,7 @@ export default function Header() {
     { name: "Features", href: "/features", icon: Rocket },
     { name: "Chatbot", href: "/chatbot", icon: MessageSquare, protected: true },
     { name: "Map", href: "/complaint-map", icon: Map, protected: true },
+    { name: "Feedback", href: "/feedback", icon: MessageSquare, protected: true },
     { name: "Analytics", href: "/analytics", icon: BarChart3, protected: true, officialOnly: true },
     { name: "Admin", href: "/admin-dashboard", icon: Shield, protected: true, adminOnly: true },
   ];

@@ -151,6 +151,19 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get all feedback (for officials)
+  app.get("/api/feedback/all", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "official" && req.user!.role !== "admin") return res.sendStatus(403);
+    
+    try {
+      const allFeedback = await storage.getAllFeedback();
+      res.json(allFeedback);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch all feedback" });
+    }
+  });
+
   // Analytics routes
   app.get("/api/analytics/stats", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

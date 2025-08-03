@@ -14,6 +14,7 @@ import ChatbotPage from "@/pages/chatbot-page";
 import ComplaintMapPage from "@/pages/complaint-map-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import FeaturesPage from "@/pages/features-page";
+import FeedbackPage from "@/pages/feedback-page";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -26,6 +27,7 @@ function Router() {
       <ProtectedRoute path="/chatbot" component={ChatbotPage} />
       <ProtectedRoute path="/complaint-map" component={ComplaintMapPage} />
       <ProtectedRoute path="/analytics" component={AnalyticsPage} />
+      <ProtectedRoute path="/feedback" component={FeedbackPage} />
       <Route path="/features" component={FeaturesPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
