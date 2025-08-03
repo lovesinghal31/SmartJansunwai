@@ -9,6 +9,10 @@ import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import CitizenDashboard from "@/pages/citizen-dashboard";
 import OfficialDashboard from "@/pages/official-dashboard";
+import ChatbotPage from "@/pages/chatbot-page";
+import ComplaintMapPage from "@/pages/complaint-map-page";
+import AnalyticsPage from "@/pages/analytics-page";
+import FeaturesPage from "@/pages/features-page";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -17,6 +21,10 @@ function Router() {
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/citizen-dashboard" component={CitizenDashboard} />
       <ProtectedRoute path="/official-dashboard" component={OfficialDashboard} />
+      <ProtectedRoute path="/chatbot" component={ChatbotPage} />
+      <ProtectedRoute path="/complaint-map" component={ComplaintMapPage} />
+      <ProtectedRoute path="/analytics" component={AnalyticsPage} />
+      <Route path="/features" component={FeaturesPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

@@ -35,7 +35,7 @@ export interface IStorage {
     byPriority: Record<string, number>;
   }>;
   
-  sessionStore: session.SessionStore;
+  sessionStore: any;
 }
 
 export class MemStorage implements IStorage {
@@ -43,7 +43,7 @@ export class MemStorage implements IStorage {
   private complaints: Map<string, Complaint>;
   private complaintUpdates: Map<string, ComplaintUpdate[]>;
   private feedbacks: Map<string, Feedback>;
-  public sessionStore: session.SessionStore;
+  public sessionStore: any;
 
   constructor() {
     this.users = new Map();
@@ -68,7 +68,9 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
     const user: User = { 
-      ...insertUser, 
+      ...insertUser,
+      role: insertUser.role || "citizen",
+      department: insertUser.department || null,
       id,
       createdAt: new Date(),
     };

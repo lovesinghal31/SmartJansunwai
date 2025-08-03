@@ -9,7 +9,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   role: text("role").notNull().default("citizen"), // citizen or official
   department: text("department"), // only for officials
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const complaints = pgTable("complaints", {
@@ -23,8 +23,8 @@ export const complaints = pgTable("complaints", {
   status: text("status").notNull().default("submitted"), // submitted, in-progress, under-review, resolved
   assignedTo: varchar("assigned_to").references(() => users.id),
   attachments: text("attachments").array(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const complaintUpdates = pgTable("complaint_updates", {
@@ -33,7 +33,7 @@ export const complaintUpdates = pgTable("complaint_updates", {
   officialId: varchar("official_id").references(() => users.id),
   message: text("message").notNull(),
   status: text("status"),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const feedback = pgTable("feedback", {
@@ -42,7 +42,7 @@ export const feedback = pgTable("feedback", {
   citizenId: varchar("citizen_id").notNull().references(() => users.id),
   rating: integer("rating").notNull(), // 1-5
   comment: text("comment"),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

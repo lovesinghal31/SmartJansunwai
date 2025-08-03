@@ -53,9 +53,9 @@ export default function AuthPage() {
     },
   });
 
-  // Redirect if already logged in
+  // Redirect if already logged in (moved outside of component body to avoid re-render issues)
   if (user) {
-    setLocation("/");
+    setTimeout(() => setLocation("/"), 0);
     return null;
   }
 

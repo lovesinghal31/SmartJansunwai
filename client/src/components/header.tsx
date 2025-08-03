@@ -1,86 +1,82 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Landmark, Bell, Menu, User, LogOut, Home, FileText, BarChart3 } from "lucide-react";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { 
+  Home, 
+  User, 
+  LogOut, 
+  Settings, 
+  BarChart3, 
+  MessageSquare, 
+  Map,
+  Rocket,
+  Menu
+} from "lucide-react";
 
 export default function Header() {
   const { user, logoutMutation } = useAuth();
   const [location] = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navigation = [
+    { name: "Home", href: "/", icon: Home },
+    { name: "Features", href: "/features", icon: Rocket },
+    { name: "Chatbot", href: "/chatbot", icon: MessageSquare, protected: true },
+    { name: "Map", href: "/complaint-map", icon: Map, protected: true },
+    { name: "Analytics", href: "/analytics", icon: BarChart3, protected: true, officialOnly: true },
+  ];
 
   const handleLogout = () => {
     logoutMutation.mutate();
   };
 
-  const navigation = [
-    { name: "Home", href: "/", icon: Home },
-    ...(user?.role === "citizen" 
-      ? [{ name: "My Complaints", href: "/citizen-dashboard", icon: FileText }]
-      : []
-    ),
-    ...(user?.role === "official" 
-      ? [{ name: "Dashboard", href: "/official-dashboard", icon: BarChart3 }]
-      : []
-    ),
-  ];
-
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-4">
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary-800 rounded-full flex items-center justify-center">
-                <Landmark className="text-white" size={20} />
+          {/* Logo */}
+          <Link href="/">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">JS</span>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Jansunwai</h1>
-                <p className="text-xs text-gray-600">Indore Smart City</p>
-              </div>
-            </Link>
-          </div>
-          
+              <span className="text-xl font-bold text-gray-900">Jansunwai</span>
+            </div>
+          </Link>
+
+          {/* Navigation */}
           <nav className="hidden md:flex space-x-8">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`text-gray-700 hover:text-primary-800 transition-colors font-medium flex items-center space-x-1 ${
-                  location === item.href ? "text-primary-800" : ""
-                }`}
-              >
-                <item.icon size={16} />
-                <span>{item.name}</span>
-              </Link>
-            ))}
+            {navigation.map((item) => {
+              // Show all items to authenticated users, or only non-protected to unauthenticated
+              const shouldShow = !item.protected || user;
+              // Hide official-only items from citizens
+              const isOfficialOnly = item.officialOnly && user?.role !== "official";
+              
+              if (!shouldShow || isOfficialOnly) return null;
+              
+              return (
+                <Link key={item.name} href={item.href}>
+                  <div className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    location === item.href
+                      ? "text-primary-600 bg-primary-50"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  }`}>
+                    <item.icon size={16} />
+                    <span>{item.name}</span>
+                  </div>
+                </Link>
+              );
+            })}
           </nav>
 
+          {/* User Menu */}
           <div className="flex items-center space-x-4">
-            {/* Language Toggle */}
-            <div className="hidden sm:flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
-              <button className="px-3 py-1 text-sm font-medium bg-white text-gray-900 rounded-md shadow-sm">
-                EN
-              </button>
-              <button className="px-3 py-1 text-sm font-medium text-gray-600 hover:text-gray-900">
-                हिंदी
-              </button>
-            </div>
-            
-            {/* Notification Bell */}
-            {user && (
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell size={20} />
-                <Badge className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs">
-                  3
-                </Badge>
-              </Button>
-            )}
-            
-            {/* User Menu */}
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -89,12 +85,21 @@ export default function Header() {
                     <span className="hidden sm:inline">{user.username}</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem className="font-medium">
-                    {user.username}
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium">{user.username}</p>
+                    <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href={user.role === "official" ? "/official-dashboard" : "/citizen-dashboard"}>
+                      <Home size={16} className="mr-2" />
+                      Dashboard
+                    </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-sm text-gray-600">
-                    {user.role === "citizen" ? "Citizen" : `Official - ${user.department}`}
+                  <DropdownMenuItem>
+                    <Settings size={16} className="mr-2" />
+                    Settings
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
@@ -104,39 +109,25 @@ export default function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Link href="/auth">
-                <Button className="bg-primary-800 text-white hover:bg-primary-900">
-                  <User className="mr-2" size={16} />
-                  Login
-                </Button>
-              </Link>
+              <div className="flex items-center space-x-2">
+                <Link href="/auth">
+                  <Button variant="outline">Sign In</Button>
+                </Link>
+                <Link href="/features">
+                  <Button>
+                    <Rocket size={16} className="mr-2" />
+                    Features
+                  </Button>
+                </Link>
+              </div>
             )}
+          </div>
 
-            {/* Mobile menu button */}
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="md:hidden">
-                  <Menu size={20} />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right">
-                <div className="flex flex-col space-y-4 mt-8">
-                  {navigation.map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={`text-gray-700 hover:text-primary-800 transition-colors font-medium flex items-center space-x-2 ${
-                        location === item.href ? "text-primary-800" : ""
-                      }`}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <item.icon size={16} />
-                      <span>{item.name}</span>
-                    </Link>
-                  ))}
-                </div>
-              </SheetContent>
-            </Sheet>
+          {/* Mobile menu button */}
+          <div className="md:hidden">
+            <Button variant="ghost" size="sm">
+              <Menu size={20} />
+            </Button>
           </div>
         </div>
       </div>
