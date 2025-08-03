@@ -22,7 +22,8 @@ import {
   CheckCircle,
   Navigation,
   QrCode,
-  Camera
+  Camera,
+  Download
 } from "lucide-react";
 import type { Complaint } from "@shared/schema";
 
