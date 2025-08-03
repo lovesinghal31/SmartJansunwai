@@ -9,6 +9,7 @@ import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import CitizenDashboard from "@/pages/citizen-dashboard";
 import OfficialDashboard from "@/pages/official-dashboard";
+import AdminDashboard from "@/pages/admin-dashboard";
 import ChatbotPage from "@/pages/chatbot-page";
 import ComplaintMapPage from "@/pages/complaint-map-page";
 import AnalyticsPage from "@/pages/analytics-page";
@@ -21,6 +22,7 @@ function Router() {
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/citizen-dashboard" component={CitizenDashboard} />
       <ProtectedRoute path="/official-dashboard" component={OfficialDashboard} />
+      <ProtectedRoute path="/admin-dashboard" component={AdminDashboard} />
       <ProtectedRoute path="/chatbot" component={ChatbotPage} />
       <ProtectedRoute path="/complaint-map" component={ComplaintMapPage} />
       <ProtectedRoute path="/analytics" component={AnalyticsPage} />

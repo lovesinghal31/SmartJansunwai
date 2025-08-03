@@ -17,7 +17,8 @@ import {
   MessageSquare, 
   Map,
   Rocket,
-  Menu
+  Menu,
+  Shield
 } from "lucide-react";
 
 export default function Header() {
@@ -30,6 +31,7 @@ export default function Header() {
     { name: "Chatbot", href: "/chatbot", icon: MessageSquare, protected: true },
     { name: "Map", href: "/complaint-map", icon: Map, protected: true },
     { name: "Analytics", href: "/analytics", icon: BarChart3, protected: true, officialOnly: true },
+    { name: "Admin", href: "/admin-dashboard", icon: Shield, protected: true, adminOnly: true },
   ];
 
   const handleLogout = () => {
@@ -57,8 +59,10 @@ export default function Header() {
               const shouldShow = !item.protected || user;
               // Hide official-only items from citizens
               const isOfficialOnly = item.officialOnly && user?.role !== "official";
+              // Hide admin-only items from non-admins
+              const isAdminOnly = item.adminOnly && user?.role !== "admin";
               
-              if (!shouldShow || isOfficialOnly) return null;
+              if (!shouldShow || isOfficialOnly || isAdminOnly) return null;
               
               return (
                 <Link key={item.name} href={item.href}>
@@ -92,7 +96,11 @@ export default function Header() {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href={user.role === "official" ? "/official-dashboard" : "/citizen-dashboard"}>
+                    <Link href={
+                      user.role === "admin" ? "/admin-dashboard" :
+                      user.role === "official" ? "/official-dashboard" : 
+                      "/citizen-dashboard"
+                    }>
                       <Home size={16} className="mr-2" />
                       Dashboard
                     </Link>
