@@ -76,6 +76,5 @@ The schema supports complaint lifecycle management from submission through resol
 - **@hookform/resolvers**: Integration between React Hook Form and Zod
 
 ## Deployment & Hosting
-- **Replit**: Cloud-based development and deployment platform
 - **WebSocket Support**: Real-time features with ws library for Neon database
 - **Environment Variables**: Secure configuration management for database URLs and session secrets

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu,
@@ -20,19 +21,21 @@ import {
   Menu,
   Shield
 } from "lucide-react";
+import LanguageSwitcher from "./language-switcher";
 
 export default function Header() {
   const { user, logoutMutation } = useAuth();
   const [location] = useLocation();
+  const { t } = useTranslation();
 
   const navigation = [
-    { name: "Home", href: "/", icon: Home },
-    { name: "Features", href: "/features", icon: Rocket },
-    { name: "Chatbot", href: "/chatbot", icon: MessageSquare, protected: true },
-    { name: "Map", href: "/complaint-map", icon: Map, protected: true },
-    { name: "Feedback", href: "/feedback", icon: MessageSquare, protected: true },
-    { name: "Analytics", href: "/analytics", icon: BarChart3, protected: true, officialOnly: true },
-    { name: "Admin", href: "/admin-dashboard", icon: Shield, protected: true, adminOnly: true },
+    { name: t('navigation.home'), href: "/", icon: Home },
+    { name: t('navigation.features'), href: "/features", icon: Rocket },
+    { name: t('navigation.chatbot'), href: "/chatbot", icon: MessageSquare, protected: true },
+    { name: t('navigation.map'), href: "/complaint-map", icon: Map, protected: true },
+    { name: t('navigation.feedback'), href: "/feedback", icon: MessageSquare, protected: true },
+    { name: t('navigation.analytics'), href: "/analytics", icon: BarChart3, protected: true, officialOnly: true },
+    { name: t('navigation.admin'), href: "/admin-dashboard", icon: Shield, protected: true, adminOnly: true },
   ];
 
   const handleLogout = () => {
