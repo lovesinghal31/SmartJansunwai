@@ -1,0 +1,972 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jansunwai - Indore Smart City Grievance Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a'
+                        },
+                        secondary: {
+                            500: '#10b981',
+                            600: '#059669'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- @COMPONENT: Header [navigation, auth, language toggle] -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-3">
+                        <!-- Government emblem placeholder -->
+                        <div class="w-10 h-10 bg-primary-800 rounded-full flex items-center justify-center">
+                            <i class="fas fa-landmark text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">Jansunwai</h1>
+                            <p class="text-xs text-gray-600">Indore Smart City</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#" class="text-gray-700 hover:text-primary-800 transition-colors font-medium">Home</a>
+                    <a href="#" class="text-gray-700 hover:text-primary-800 transition-colors font-medium">Submit Complaint</a>
+                    <a href="#" class="text-gray-700 hover:text-primary-800 transition-colors font-medium">Track Status</a>
+                    <a href="#" class="text-gray-700 hover:text-primary-800 transition-colors font-medium">Help</a>
+                </nav>
+
+                <div class="flex items-center space-x-4">
+                    <!-- Language Toggle -->
+                    <div class="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+                        <button class="px-3 py-1 text-sm font-medium bg-white text-gray-900 rounded-md shadow-sm">EN</button>
+                        <button class="px-3 py-1 text-sm font-medium text-gray-600 hover:text-gray-900">हिंदी</button>
+                    </div>
+                    
+                    <!-- Notification Bell -->
+                    <button class="relative p-2 text-gray-600 hover:text-gray-900 transition-colors" data-event="click:showNotifications">
+                        <i class="fas fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs" data-mock="true">3</span>
+                    </button>
+                    
+                    <!-- User Menu -->
+                    <div class="flex items-center space-x-2">
+                        <button class="bg-primary-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-900 transition-colors" data-event="click:showLogin">
+                            <i class="fas fa-user mr-2"></i>Login
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mobile menu button -->
+                <button class="md:hidden p-2 text-gray-600" data-event="click:toggleMobileMenu">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <!-- @COMPONENT: HeroSection [main complaint submission, quick access] -->
+    <section class="bg-gradient-to-br from-primary-800 to-primary-900 text-white py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h1 class="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+                        Smart Grievance Redressal for 
+                        <span class="text-yellow-300">Indore</span>
+                    </h1>
+                    <p class="text-xl text-blue-100 mb-8 leading-relaxed">
+                        AI-powered platform to submit, track, and resolve civic complaints efficiently. 
+                        Your voice matters in building a better Indore.
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 mb-8">
+                        <button class="bg-white text-primary-800 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center justify-center" data-event="click:newComplaint">
+                            <i class="fas fa-plus mr-2"></i>
+                            Submit New Complaint
+                        </button>
+                        <button class="border border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-primary-800 transition-colors flex items-center justify-center" data-event="click:trackComplaint">
+                            <i class="fas fa-search mr-2"></i>
+                            Track Complaint
+                        </button>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="grid grid-cols-3 gap-6 text-center">
+                        <div>
+                            <div class="text-2xl font-bold text-yellow-300" data-mock="true" data-bind="stats.totalComplaints">12,847</div>
+                            <div class="text-sm text-blue-100">Total Complaints</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-green-300" data-mock="true" data-bind="stats.resolvedComplaints">10,234</div>
+                            <div class="text-sm text-blue-100">Resolved</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-yellow-300" data-mock="true" data-bind="stats.avgResolutionTime">4.2 days</div>
+                            <div class="text-sm text-blue-100">Avg Resolution</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Complaint Form -->
+                <div class="bg-white rounded-xl shadow-2xl p-6 text-gray-900">
+                    <h3 class="text-xl font-bold mb-6 text-center">Quick Complaint Submission</h3>
+                    
+                    <form class="space-y-4" data-implementation="Should integrate with complaint submission API">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Complaint Category</label>
+                            <select class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-colors" data-mock="true">
+                                <option>Select Category</option>
+                                <option>Road & Transportation</option>
+                                <option>Water Supply</option>
+                                <option>Electricity</option>
+                                <option>Sanitation</option>
+                                <option>Street Lighting</option>
+                                <option>Parks & Recreation</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                            <div class="relative">
+                                <input type="text" placeholder="Enter location or scan QR code" 
+                                       class="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-colors" data-mock="true">
+                                <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-primary-600" data-event="click:scanQR" data-implementation="Should integrate QR scanner">
+                                    <i class="fas fa-qrcode"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Complaint Description</label>
+                            <div class="relative">
+                                <textarea rows="3" placeholder="Describe your complaint in detail..." 
+                                         class="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-colors resize-none" data-mock="true"></textarea>
+                                <button type="button" class="absolute right-3 bottom-3 text-gray-500 hover:text-primary-600" data-event="click:voiceInput" data-implementation="Should integrate speech-to-text">
+                                    <i class="fas fa-microphone"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Attach Evidence</label>
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-primary-400 transition-colors cursor-pointer" data-implementation="Should integrate file upload">
+                                <i class="fas fa-cloud-upload-alt text-2xl text-gray-400 mb-2"></i>
+                                <p class="text-sm text-gray-600">Drop files here or click to upload</p>
+                                <p class="text-xs text-gray-500 mt-1">Photos, videos, documents (Max 10MB)</p>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-primary-800 text-white py-3 rounded-lg font-semibold hover:bg-primary-900 transition-colors" data-event="click:submitComplaint" data-implementation="Should validate form and submit complaint">
+                            <i class="fas fa-paper-plane mr-2"></i>
+                            Submit Complaint
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: HeroSection -->
+
+    <!-- @COMPONENT: FeaturesOverview [key platform capabilities] -->
+    <section class="py-16 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Platform Features</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+                    Advanced AI-powered tools and intuitive interfaces designed to streamline 
+                    the grievance redressal process for both citizens and officials.
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- @MAP: features.map(feature => ( -->
+                <div class="bg-gray-50 rounded-xl p-6 hover:shadow-lg transition-shadow">
+                    <div class="w-12 h-12 bg-primary-100 text-primary-800 rounded-lg flex items-center justify-center mb-4">
+                        <i class="fas fa-robot text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">AI-Powered Classification</h3>
+                    <p class="text-gray-600 text-sm">
+                        Automatically categorize and route complaints to the right department using advanced NLP algorithms.
+                    </p>
+                </div>
+                
+                <div class="bg-gray-50 rounded-xl p-6 hover:shadow-lg transition-shadow">
+                    <div class="w-12 h-12 bg-secondary-100 text-secondary-600 rounded-lg flex items-center justify-center mb-4">
+                        <i class="fas fa-map-marked-alt text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Interactive Complaint Map</h3>
+                    <p class="text-gray-600 text-sm">
+                        Visualize complaints geographically with real-time plotting and heatmap analysis.
+                    </p>
+                </div>
+                
+                <div class="bg-gray-50 rounded-xl p-6 hover:shadow-lg transition-shadow">
+                    <div class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-lg flex items-center justify-center mb-4">
+                        <i class="fas fa-comments text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Smart Chatbot Assistant</h3>
+                    <p class="text-gray-600 text-sm">
+                        Get instant help and guidance through our AI chatbot trained on common civic issues.
+                    </p>
+                </div>
+                
+                <div class="bg-gray-50 rounded-xl p-6 hover:shadow-lg transition-shadow">
+                    <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center mb-4">
+                        <i class="fas fa-mobile-alt text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Mobile-First PWA</h3>
+                    <p class="text-gray-600 text-sm">
+                        Access the platform seamlessly across all devices with offline support and push notifications.
+                    </p>
+                </div>
+                
+                <div class="bg-gray-50 rounded-xl p-6 hover:shadow-lg transition-shadow">
+                    <div class="w-12 h-12 bg-green-100 text-green-600 rounded-lg flex items-center justify-center mb-4">
+                        <i class="fas fa-chart-line text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Real-time Analytics</h3>
+                    <p class="text-gray-600 text-sm">
+                        Comprehensive dashboards with performance metrics and predictive insights for officials.
+                    </p>
+                </div>
+                
+                <div class="bg-gray-50 rounded-xl p-6 hover:shadow-lg transition-shadow">
+                    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-lg flex items-center justify-center mb-4">
+                        <i class="fas fa-exclamation-triangle text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Smart SLA Management</h3>
+                    <p class="text-gray-600 text-sm">
+                        Automated escalation and priority assignment based on complaint type and severity.
+                    </p>
+                </div>
+                <!-- @END_MAP )) -->
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: FeaturesOverview -->
+
+    <!-- @COMPONENT: DashboardPreview [citizen and official interface previews] -->
+    <section class="py-16 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Dual Dashboard Experience</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+                    Separate optimized interfaces for citizens to track their complaints and officials to manage resolutions efficiently.
+                </p>
+            </div>
+            
+            <!-- Dashboard Toggle -->
+            <div class="flex justify-center mb-8">
+                <div class="bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+                    <button class="px-6 py-2 rounded-md font-medium transition-colors bg-primary-800 text-white" data-event="click:showCitizenDashboard">
+                        Citizen Dashboard
+                    </button>
+                    <button class="px-6 py-2 rounded-md font-medium transition-colors text-gray-600 hover:text-gray-900" data-event="click:showOfficialDashboard">
+                        Official Dashboard
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Citizen Dashboard Preview -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden" data-implementation="Toggle between citizen and official views">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-900">My Complaints</h3>
+                        <button class="bg-primary-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-900 transition-colors">
+                            <i class="fas fa-plus mr-2"></i>New Complaint
+                        </button>
+                    </div>
+                    
+                    <!-- Status Overview Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="text-2xl font-bold text-blue-600" data-mock="true">5</div>
+                            <div class="text-sm text-blue-700">Total Complaints</div>
+                        </div>
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <div class="text-2xl font-bold text-yellow-600" data-mock="true">2</div>
+                            <div class="text-sm text-yellow-700">In Progress</div>
+                        </div>
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <div class="text-2xl font-bold text-green-600" data-mock="true">3</div>
+                            <div class="text-sm text-green-700">Resolved</div>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <div class="text-2xl font-bold text-gray-600" data-mock="true">4.2</div>
+                            <div class="text-sm text-gray-700">Avg Days</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Complaints List -->
+                    <div class="space-y-4">
+                        <!-- @MAP: complaints.map(complaint => ( -->
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" data-mock="true">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-3 mb-2">
+                                        <span class="font-medium text-gray-900">JAN/2024/001234</span>
+                                        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">In Progress</span>
+                                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">Road & Transportation</span>
+                                    </div>
+                                    <h4 class="font-medium text-gray-900 mb-1">Pothole on Ring Road near IT Park</h4>
+                                    <p class="text-sm text-gray-600 mb-2">Large pothole causing traffic issues and vehicle damage...</p>
+                                    <div class="flex items-center space-x-4 text-sm text-gray-500">
+                                        <span><i class="fas fa-calendar mr-1"></i>Submitted: 15 Jan 2024</span>
+                                        <span><i class="fas fa-map-marker-alt mr-1"></i>Ring Road, Vijay Nagar</span>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-end space-y-2">
+                                    <button class="text-primary-600 hover:text-primary-800 font-medium text-sm" data-event="click:viewDetails">
+                                        View Details
+                                    </button>
+                                    <div class="text-xs text-gray-500">Updated 2h ago</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" data-mock="true">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-3 mb-2">
+                                        <span class="font-medium text-gray-900">JAN/2024/001235</span>
+                                        <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Resolved</span>
+                                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">Street Lighting</span>
+                                    </div>
+                                    <h4 class="font-medium text-gray-900 mb-1">Street light not working in Rajwada area</h4>
+                                    <p class="text-sm text-gray-600 mb-2">Multiple street lights are not functioning since last week...</p>
+                                    <div class="flex items-center space-x-4 text-sm text-gray-500">
+                                        <span><i class="fas fa-calendar mr-1"></i>Submitted: 12 Jan 2024</span>
+                                        <span><i class="fas fa-map-marker-alt mr-1"></i>Rajwada Square</span>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-end space-y-2">
+                                    <button class="text-primary-600 hover:text-primary-800 font-medium text-sm" data-event="click:provideFeedback">
+                                        Rate Resolution
+                                    </button>
+                                    <div class="text-xs text-green-600">Resolved</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- @END_MAP )) -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: DashboardPreview -->
+
+    <!-- @COMPONENT: OfficialDashboard [official interface with kanban board] -->
+    <section class="py-16 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Official Dashboard</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+                    Advanced complaint management tools with Kanban workflow, analytics, and intelligent routing.
+                </p>
+            </div>
+            
+            <!-- Dashboard Controls -->
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 mb-8">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+                        <div class="flex items-center space-x-4">
+                            <select class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
+                                <option>All Departments</option>
+                                <option>Road & Transportation</option>
+                                <option>Water Supply</option>
+                                <option>Electricity</option>
+                                <option>Sanitation</option>
+                            </select>
+                            <select class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
+                                <option>All Priorities</option>
+                                <option>High</option>
+                                <option>Medium</option>
+                                <option>Low</option>
+                            </select>
+                            <div class="relative">
+                                <input type="text" placeholder="Search complaints..." 
+                                       class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none w-64">
+                                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <button class="px-4 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-download mr-2"></i>Export
+                            </button>
+                            <button class="px-4 py-2 bg-primary-800 text-white rounded-lg hover:bg-primary-900 transition-colors">
+                                <i class="fas fa-chart-bar mr-2"></i>Analytics
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Stats for Officials -->
+                <div class="p-6">
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-gray-900" data-mock="true" data-bind="officialStats.total">847</div>
+                            <div class="text-sm text-gray-600">Total Active</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-red-600" data-mock="true" data-bind="officialStats.urgent">23</div>
+                            <div class="text-sm text-gray-600">Urgent</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-yellow-600" data-mock="true" data-bind="officialStats.overdue">12</div>
+                            <div class="text-sm text-gray-600">Overdue</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600" data-mock="true" data-bind="officialStats.assigned">156</div>
+                            <div class="text-sm text-gray-600">Assigned</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600" data-mock="true" data-bind="officialStats.resolvedToday">34</div>
+                            <div class="text-sm text-gray-600">Resolved Today</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-600" data-mock="true" data-bind="officialStats.avgResolution">3.8</div>
+                            <div class="text-sm text-gray-600">Avg Days</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Kanban Board -->
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Complaint Management Board</h3>
+                </div>
+                
+                <div class="p-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        <!-- New Complaints Column -->
+                        <div class="bg-gray-50 rounded-lg">
+                            <div class="p-4 border-b border-gray-200 bg-gray-100">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-medium text-gray-900">New</h4>
+                                    <span class="bg-gray-600 text-white px-2 py-1 rounded-full text-xs" data-mock="true">24</span>
+                                </div>
+                            </div>
+                            <div class="p-4 space-y-3 max-h-96 overflow-y-auto">
+                                <!-- @MAP: newComplaints.map(complaint => ( -->
+                                <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow" data-mock="true" data-event="click:viewComplaintDetails">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-600">JAN/2024/001298</span>
+                                        <span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">High</span>
+                                    </div>
+                                    <h5 class="text-sm font-medium text-gray-900 mb-1">Water leakage in Palasia</h5>
+                                    <p class="text-xs text-gray-600 mb-2">Major water pipe burst causing...</p>
+                                    <div class="flex items-center justify-between text-xs text-gray-500">
+                                        <span>2 hours ago</span>
+                                        <span class="text-orange-600">SLA: 22h left</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow" data-mock="true">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-600">JAN/2024/001299</span>
+                                        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">Medium</span>
+                                    </div>
+                                    <h5 class="text-sm font-medium text-gray-900 mb-1">Garbage collection delay</h5>
+                                    <p class="text-xs text-gray-600 mb-2">Garbage not collected for 3 days...</p>
+                                    <div class="flex items-center justify-between text-xs text-gray-500">
+                                        <span>4 hours ago</span>
+                                        <span class="text-green-600">SLA: 44h left</span>
+                                    </div>
+                                </div>
+                                <!-- @END_MAP )) -->
+                            </div>
+                        </div>
+                        
+                        <!-- In Progress Column -->
+                        <div class="bg-blue-50 rounded-lg">
+                            <div class="p-4 border-b border-blue-200 bg-blue-100">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-medium text-gray-900">In Progress</h4>
+                                    <span class="bg-blue-600 text-white px-2 py-1 rounded-full text-xs" data-mock="true">18</span>
+                                </div>
+                            </div>
+                            <div class="p-4 space-y-3 max-h-96 overflow-y-auto">
+                                <div class="bg-white rounded-lg p-3 shadow-sm border border-blue-200 cursor-pointer hover:shadow-md transition-shadow" data-mock="true">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-600">JAN/2024/001295</span>
+                                        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">Medium</span>
+                                    </div>
+                                    <h5 class="text-sm font-medium text-gray-900 mb-1">Street light repair</h5>
+                                    <p class="text-xs text-gray-600 mb-2">Assigned to: Electrical Dept</p>
+                                    <div class="flex items-center justify-between text-xs text-gray-500">
+                                        <span>1 day ago</span>
+                                        <span class="text-yellow-600">SLA: 12h left</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Under Review Column -->
+                        <div class="bg-yellow-50 rounded-lg">
+                            <div class="p-4 border-b border-yellow-200 bg-yellow-100">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-medium text-gray-900">Under Review</h4>
+                                    <span class="bg-yellow-600 text-white px-2 py-1 rounded-full text-xs" data-mock="true">8</span>
+                                </div>
+                            </div>
+                            <div class="p-4 space-y-3 max-h-96 overflow-y-auto">
+                                <div class="bg-white rounded-lg p-3 shadow-sm border border-yellow-200 cursor-pointer hover:shadow-md transition-shadow" data-mock="true">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-600">JAN/2024/001290</span>
+                                        <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Low</span>
+                                    </div>
+                                    <h5 class="text-sm font-medium text-gray-900 mb-1">Park maintenance</h5>
+                                    <p class="text-xs text-gray-600 mb-2">Awaiting citizen feedback</p>
+                                    <div class="flex items-center justify-between text-xs text-gray-500">
+                                        <span>3 days ago</span>
+                                        <span class="text-green-600">On Time</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Resolved Column -->
+                        <div class="bg-green-50 rounded-lg">
+                            <div class="p-4 border-b border-green-200 bg-green-100">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-medium text-gray-900">Resolved</h4>
+                                    <span class="bg-green-600 text-white px-2 py-1 rounded-full text-xs" data-mock="true">34</span>
+                                </div>
+                            </div>
+                            <div class="p-4 space-y-3 max-h-96 overflow-y-auto">
+                                <div class="bg-white rounded-lg p-3 shadow-sm border border-green-200 cursor-pointer hover:shadow-md transition-shadow" data-mock="true">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-600">JAN/2024/001285</span>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-yellow-400">
+                                                <i class="fas fa-star text-xs"></i>
+                                                <i class="fas fa-star text-xs"></i>
+                                                <i class="fas fa-star text-xs"></i>
+                                                <i class="fas fa-star text-xs"></i>
+                                                <i class="fas fa-star text-xs"></i>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <h5 class="text-sm font-medium text-gray-900 mb-1">Road pothole fixed</h5>
+                                    <p class="text-xs text-gray-600 mb-2">Citizen rated: 5/5 stars</p>
+                                    <div class="flex items-center justify-between text-xs text-gray-500">
+                                        <span>Resolved today</span>
+                                        <span class="text-green-600">2 days early</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: OfficialDashboard -->
+
+    <!-- @COMPONENT: AnalyticsSection [real-time data visualization] -->
+    <section class="py-16 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Real-time Analytics & Insights</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+                    Comprehensive data visualization and predictive analytics to help officials make informed decisions.
+                </p>
+            </div>
+            
+            <div class="grid lg:grid-cols-2 gap-8">
+                <!-- Complaint Map -->
+                <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                    <div class="p-6 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">Complaint Heatmap</h3>
+                        <p class="text-sm text-gray-600 mt-1">Geographic distribution of active complaints</p>
+                    </div>
+                    <div class="p-6">
+                        <!-- A bird's eye view of Indore city with marked complaint locations and density clusters -->
+                        <div class="bg-gradient-to-br from-green-100 to-blue-100 rounded-lg h-64 flex items-center justify-center relative overflow-hidden" data-implementation="Should integrate with Leaflet.js or Mapbox for real map">
+                            <div class="absolute inset-0 opacity-20">
+                                <!-- Simulated map with complaint markers -->
+                                <div class="absolute top-1/4 left-1/3 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                <div class="absolute top-1/2 left-1/2 w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                <div class="absolute top-3/4 left-1/4 w-4 h-4 bg-red-600 rounded-full animate-pulse"></div>
+                                <div class="absolute top-1/3 right-1/4 w-2 h-2 bg-green-500 rounded-full"></div>
+                                <div class="absolute bottom-1/4 left-2/3 w-3 h-3 bg-orange-500 rounded-full"></div>
+                            </div>
+                            <div class="text-center z-10">
+                                <i class="fas fa-map-marked-alt text-4xl text-gray-400 mb-2"></i>
+                                <p class="text-gray-600 font-medium">Interactive Complaint Map</p>
+                                <p class="text-sm text-gray-500">Clustered by location & severity</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Map Legend -->
+                        <div class="mt-4 flex items-center justify-center space-x-6">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                <span class="text-xs text-gray-600">High Priority</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                <span class="text-xs text-gray-600">Medium Priority</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                <span class="text-xs text-gray-600">Low Priority</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Analytics Charts -->
+                <div class="space-y-6">
+                    <!-- Department Performance -->
+                    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                        <div class="p-6 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-900">Department Performance</h3>
+                            <p class="text-sm text-gray-600 mt-1">Resolution rates by department</p>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between" data-mock="true">
+                                    <span class="text-sm font-medium text-gray-700">Road & Transportation</span>
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-32 bg-gray-200 rounded-full h-2">
+                                            <div class="bg-green-500 h-2 rounded-full" style="width: 85%"></div>
+                                        </div>
+                                        <span class="text-sm text-gray-600 w-10">85%</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between" data-mock="true">
+                                    <span class="text-sm font-medium text-gray-700">Water Supply</span>
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-32 bg-gray-200 rounded-full h-2">
+                                            <div class="bg-yellow-500 h-2 rounded-full" style="width: 72%"></div>
+                                        </div>
+                                        <span class="text-sm text-gray-600 w-10">72%</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between" data-mock="true">
+                                    <span class="text-sm font-medium text-gray-700">Electricity</span>
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-32 bg-gray-200 rounded-full h-2">
+                                            <div class="bg-green-500 h-2 rounded-full" style="width: 91%"></div>
+                                        </div>
+                                        <span class="text-sm text-gray-600 w-10">91%</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between" data-mock="true">
+                                    <span class="text-sm font-medium text-gray-700">Sanitation</span>
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-32 bg-gray-200 rounded-full h-2">
+                                            <div class="bg-red-500 h-2 rounded-full" style="width: 68%"></div>
+                                        </div>
+                                        <span class="text-sm text-gray-600 w-10">68%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Satisfaction Metrics -->
+                    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                        <div class="p-6 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-900">Citizen Satisfaction</h3>
+                            <p class="text-sm text-gray-600 mt-1">Average ratings and feedback</p>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="text-center" data-mock="true">
+                                    <div class="text-3xl font-bold text-green-600">4.2</div>
+                                    <div class="text-sm text-gray-600">Overall Rating</div>
+                                    <div class="flex justify-center text-yellow-400 mt-1">
+                                        <i class="fas fa-star text-sm"></i>
+                                        <i class="fas fa-star text-sm"></i>
+                                        <i class="fas fa-star text-sm"></i>
+                                        <i class="fas fa-star text-sm"></i>
+                                        <i class="far fa-star text-sm"></i>
+                                    </div>
+                                </div>
+                                <div class="text-center" data-mock="true">
+                                    <div class="text-3xl font-bold text-blue-600">89%</div>
+                                    <div class="text-sm text-gray-600">Would Recommend</div>
+                                    <div class="text-xs text-gray-500 mt-1">Based on 1,247 responses</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: AnalyticsSection -->
+
+    <!-- @COMPONENT: AIFeaturesSection [AI capabilities showcase] -->
+    <section class="py-16 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">AI-Powered Intelligence</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+                    Advanced machine learning algorithms working behind the scenes to improve efficiency and citizen experience.
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-100">
+                    <div class="w-12 h-12 bg-purple-600 text-white rounded-lg flex items-center justify-center mb-4">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Smart Classification</h3>
+                    <p class="text-gray-600 text-sm mb-4">
+                        Automatically categorize complaints and route them to the appropriate department using NLP.
+                    </p>
+                    <div class="bg-white rounded-lg p-3 text-xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-gray-600">Accuracy Rate</span>
+                            <span class="font-semibold text-purple-600" data-mock="true">94.2%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5">
+                            <div class="bg-purple-600 h-1.5 rounded-full" style="width: 94%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
+                    <div class="w-12 h-12 bg-green-600 text-white rounded-lg flex items-center justify-center mb-4">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Predictive Analytics</h3>
+                    <p class="text-gray-600 text-sm mb-4">
+                        Forecast complaint trends and identify potential issues before they escalate.
+                    </p>
+                    <div class="bg-white rounded-lg p-3 text-xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-gray-600">Prediction Accuracy</span>
+                            <span class="font-semibold text-green-600" data-mock="true">87.5%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5">
+                            <div class="bg-green-600 h-1.5 rounded-full" style="width: 87%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 border border-orange-100">
+                    <div class="w-12 h-12 bg-orange-600 text-white rounded-lg flex items-center justify-center mb-4">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Sentiment Analysis</h3>
+                    <p class="text-gray-600 text-sm mb-4">
+                        Understand citizen emotions and prioritize complaints based on urgency and sentiment.
+                    </p>
+                    <div class="bg-white rounded-lg p-3 text-xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-gray-600">Emotional Detection</span>
+                            <span class="font-semibold text-orange-600" data-mock="true">91.8%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5">
+                            <div class="bg-orange-600 h-1.5 rounded-full" style="width: 92%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Demo Section -->
+            <div class="mt-12 bg-gray-50 rounded-xl p-8 border border-gray-200">
+                <h3 class="text-xl font-bold text-gray-900 mb-6 text-center">AI Assistant Demo</h3>
+                <div class="max-w-2xl mx-auto">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="p-4 bg-primary-800 text-white">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-robot text-sm"></i>
+                                </div>
+                                <span class="font-medium">Jansunwai AI Assistant</span>
+                                <div class="flex-1"></div>
+                                <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                                <span class="text-sm">Online</span>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 space-y-4 max-h-64 overflow-y-auto">
+                            <!-- Chat Messages -->
+                            <div class="flex items-start space-x-3" data-mock="true">
+                                <div class="w-8 h-8 bg-primary-100 text-primary-800 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-robot text-xs"></i>
+                                </div>
+                                <div class="bg-gray-100 rounded-lg p-3 max-w-xs">
+                                    <p class="text-sm text-gray-900">Hello! I'm here to help you with your complaint. What issue would you like to report?</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start space-x-3 justify-end" data-mock="true">
+                                <div class="bg-primary-800 text-white rounded-lg p-3 max-w-xs">
+                                    <p class="text-sm">There's a large pothole on Ring Road that's causing traffic problems.</p>
+                                </div>
+                                <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-user text-xs text-gray-600"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start space-x-3" data-mock="true">
+                                <div class="w-8 h-8 bg-primary-100 text-primary-800 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-robot text-xs"></i>
+                                </div>
+                                <div class="bg-gray-100 rounded-lg p-3 max-w-xs">
+                                    <p class="text-sm text-gray-900">I've categorized this as a "Road & Transportation" issue. Can you provide the exact location? You can also use voice input or scan a QR code if available.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 border-t border-gray-200">
+                            <div class="flex items-center space-x-3">
+                                <input type="text" placeholder="Type your message..." 
+                                       class="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm" data-mock="true">
+                                <button class="p-2 text-gray-500 hover:text-primary-600" data-event="click:voiceInput">
+                                    <i class="fas fa-microphone"></i>
+                                </button>
+                                <button class="bg-primary-800 text-white p-2 rounded-lg hover:bg-primary-900 transition-colors" data-event="click:sendMessage">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: AIFeaturesSection -->
+
+    <!-- @COMPONENT: Footer [contact, links, additional info] -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
+                            <i class="fas fa-landmark text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg">Jansunwai</h3>
+                            <p class="text-sm text-gray-400">Indore Smart City</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-4">
+                        Empowering citizens with efficient grievance redressal through AI-powered solutions.
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fab fa-facebook"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fab fa-youtube"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4">Quick Links</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Submit Complaint</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Track Status</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Department Contacts</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">FAQ</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">User Guide</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4">For Officials</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Official Login</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Admin Dashboard</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Analytics</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Training Resources</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">API Documentation</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4">Contact</h4>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-phone text-primary-400"></i>
+                            <span class="text-gray-400">+91 731 2345678</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-envelope text-primary-400"></i>
+                            <span class="text-gray-400">jansunwai@indoresmartcity.gov.in</span>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <i class="fas fa-map-marker-alt text-primary-400 mt-1"></i>
+                            <span class="text-gray-400">Indore Municipal Corporation<br>Nehru Park, Indore 452001</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row items-center justify-between">
+                <p class="text-gray-400 text-sm">© 2024 Indore Smart City. All rights reserved.</p>
+                <div class="flex space-x-6 mt-4 md:mt-0">
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors text-sm">Privacy Policy</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors text-sm">Terms of Service</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors text-sm">Accessibility</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- @END_COMPONENT: Footer -->
+
+    <!-- @STATE: mobileMenuOpen:boolean = false -->
+    <!-- @STATE: selectedDashboard:string = 'citizen' -->
+    <!-- @STATE: notifications:array = [] -->
+
+    <script>
+        (function() {
+            // TODO: Implement real-time WebSocket connections for notifications
+            // TODO: Integrate with authentication system (Firebase Auth)
+            // TODO: Add service worker for PWA functionality
+            // TODO: Implement complaint submission API integration
+            // TODO: Add voice-to-text functionality (Google Speech API)
+            // TODO: Integrate QR code scanner
+            // TODO: Add map integration (Leaflet.js/Mapbox)
+            // TODO: Implement chatbot functionality (Dialogflow/OpenAI)
+            // TODO: Add real complaint tracking and status updates
+            
+            // Mock interactive functionality for demo purposes
+            console.log('Jansunwai Platform - Demo Mode');
+            console.log('Features to implement:');
+            console.log('- Real-time complaint submission and tracking');
+            console.log('- AI-powered complaint classification');
+            console.log('- Interactive maps with live complaint plotting');
+            console.log('- Voice input and multilingual support');
+            console.log('- Official dashboard with Kanban workflow');
+            console.log('- Advanced analytics and reporting');
+        })();
+    </script>
+</body>
+</html>
