@@ -34,6 +34,7 @@ export default function Header() {
     { name: t('navigation.chatbot'), href: "/chatbot", icon: MessageSquare, protected: true },
     { name: t('navigation.map'), href: "/complaint-map", icon: Map, protected: true },
     { name: t('navigation.feedback'), href: "/feedback", icon: MessageSquare, protected: true },
+    { name: "Service Feedback", href: "/service-feedback", icon: MessageSquare, protected: true },
     { name: t('navigation.analytics'), href: "/analytics", icon: BarChart3, protected: true, officialOnly: true },
     { name: t('navigation.admin'), href: "/admin-dashboard", icon: Shield, protected: true, adminOnly: true },
   ];

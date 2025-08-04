@@ -15,6 +15,7 @@ import ComplaintMapPage from "@/pages/complaint-map-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import FeaturesPage from "@/pages/features-page";
 import FeedbackPage from "@/pages/feedback-page";
+import ServiceFeedbackPage from "@/pages/service-feedback";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -28,6 +29,7 @@ function Router() {
       <ProtectedRoute path="/complaint-map" component={ComplaintMapPage} />
       <ProtectedRoute path="/analytics" component={AnalyticsPage} />
       <ProtectedRoute path="/feedback" component={FeedbackPage} />
+      <ProtectedRoute path="/service-feedback" component={ServiceFeedbackPage} />
       <Route path="/features" component={FeaturesPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />

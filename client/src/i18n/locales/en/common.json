@@ -216,5 +216,81 @@
     "updated": "Updated successfully",
     "deleted": "Deleted successfully",
     "submitted": "Submitted successfully"
+  },
+  "serviceFeedback": {
+    "title": "Service Feedback",
+    "subtitle": "Help us improve our services by sharing your experience",
+    "submitFeedback": "Submit Service Feedback",
+    "yourServiceFeedback": "Your Service Feedback",
+    "generalServiceFeedback": "General Service Feedback",
+    "overallRating": "Overall Rating",
+    "serviceQualityRating": "Service Quality Rating",
+    "responseTimeRating": "Response Time Rating",
+    "staffBehaviorRating": "Staff Behavior Rating",
+    "accessibilityRating": "Accessibility Rating",
+    "suggestions": "Suggestions for Improvement",
+    "wouldRecommend": "Would you recommend our services?",
+    "specificDepartment": "Specific Department (Optional)",
+    "serviceUsageFrequency": "How often do you use our services?",
+    "contactMethod": "How did you contact us?",
+    "issues": "Main Issues Faced",
+    "improvements": "Areas for Improvement",
+    "isAnonymous": "Submit anonymously",
+    "serviceCategory": "Service Category",
+    "feedbackSubmitted": "Service feedback submitted successfully",
+    "thankYou": "Thank you for helping us improve our services!",
+    "categories": {
+      "overall": "Overall Government Services",
+      "water_supply": "Water Supply Services",
+      "roads": "Roads & Transportation",
+      "electricity": "Electricity Services",
+      "sanitation": "Sanitation Services",
+      "street_lighting": "Street Lighting",
+      "parks": "Parks & Recreation",
+      "administration": "Administration Services",
+      "online_services": "Online Services"
+    },
+    "frequencies": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "rarely": "Rarely",
+      "first_time": "First Time"
+    },
+    "contactMethods": {
+      "online": "Online Portal",
+      "phone": "Phone Call",
+      "in_person": "In Person",
+      "email": "Email",
+      "mobile_app": "Mobile App"
+    },
+    "commonIssues": {
+      "long_wait_times": "Long wait times",
+      "poor_service_quality": "Poor service quality",
+      "unhelpful_staff": "Unhelpful staff",
+      "unclear_process": "Unclear process",
+      "system_downtime": "System downtime",
+      "lack_of_information": "Lack of information"
+    },
+    "improvementAreas": {
+      "faster_response": "Faster response times",
+      "better_communication": "Better communication",
+      "staff_training": "Staff training",
+      "system_upgrade": "System upgrades",
+      "clearer_guidelines": "Clearer guidelines",
+      "more_accessibility": "Better accessibility"
+    },
+    "management": {
+      "title": "Service Feedback Management",
+      "subtitle": "Monitor and analyze citizen service feedback",
+      "totalResponses": "Total Responses",
+      "averageRatings": "Average Ratings",
+      "recommendationRate": "Recommendation Rate",
+      "responsesByCategory": "Responses by Category",
+      "allServiceFeedback": "All Service Feedback",
+      "filterByCategory": "Filter by Category",
+      "exportData": "Export Data",
+      "detailedAnalysis": "Detailed Analysis"
+    }
   }
 }

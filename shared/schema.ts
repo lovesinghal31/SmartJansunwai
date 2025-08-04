@@ -7,8 +7,13 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull().default("citizen"), // citizen or official
+  role: text("role").notNull().default("citizen"), // citizen, official, admin
   department: text("department"), // only for officials
+  email: text("email"),
+  phone: text("phone"),
+  fullName: text("full_name"),
+  address: text("address"),
+  preferredLanguage: text("preferred_language").notNull().default("en"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -38,10 +43,30 @@ export const complaintUpdates = pgTable("complaint_updates", {
 
 export const feedback = pgTable("feedback", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  complaintId: varchar("complaint_id").notNull().references(() => complaints.id),
+  complaintId: varchar("complaint_id").references(() => complaints.id),
   citizenId: varchar("citizen_id").notNull().references(() => users.id),
   rating: integer("rating").notNull(), // 1-5
   comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const serviceFeedback = pgTable("service_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  citizenId: varchar("citizen_id").notNull().references(() => users.id),
+  serviceCategory: text("service_category").notNull(), // Overall, Water, Roads, Electricity, etc.
+  overallRating: integer("overall_rating").notNull(), // 1-5
+  serviceQualityRating: integer("service_quality_rating").notNull(), // 1-5
+  responseTimeRating: integer("response_time_rating").notNull(), // 1-5
+  staffBehaviorRating: integer("staff_behavior_rating").notNull(), // 1-5
+  accessibilityRating: integer("accessibility_rating").notNull(), // 1-5
+  suggestions: text("suggestions"),
+  wouldRecommend: boolean("would_recommend").notNull(),
+  specificDepartment: text("specific_department"),
+  serviceUsageFrequency: text("service_usage_frequency"), // Daily, Weekly, Monthly, Rarely
+  contactMethod: text("contact_method"), // Online, Phone, In-person
+  issues: text("issues").array(),
+  improvements: text("improvements").array(),
+  isAnonymous: boolean("is_anonymous").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -103,6 +128,11 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   role: true,
   department: true,
+  email: true,
+  phone: true,
+  fullName: true,
+  address: true,
+  preferredLanguage: true,
 });
 
 export const insertComplaintSchema = createInsertSchema(complaints).pick({
@@ -123,6 +153,23 @@ export const insertFeedbackSchema = createInsertSchema(feedback).pick({
   complaintId: true,
   rating: true,
   comment: true,
+});
+
+export const insertServiceFeedbackSchema = createInsertSchema(serviceFeedback).pick({
+  serviceCategory: true,
+  overallRating: true,
+  serviceQualityRating: true,
+  responseTimeRating: true,
+  staffBehaviorRating: true,
+  accessibilityRating: true,
+  suggestions: true,
+  wouldRecommend: true,
+  specificDepartment: true,
+  serviceUsageFrequency: true,
+  contactMethod: true,
+  issues: true,
+  improvements: true,
+  isAnonymous: true,
 });
 
 export const insertDepartmentSchema = createInsertSchema(departments).pick({
@@ -175,6 +222,8 @@ export type InsertComplaintUpdate = z.infer<typeof insertComplaintUpdateSchema>;
 export type ComplaintUpdate = typeof complaintUpdates.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 export type Feedback = typeof feedback.$inferSelect;
+export type InsertServiceFeedback = z.infer<typeof insertServiceFeedbackSchema>;
+export type ServiceFeedback = typeof serviceFeedback.$inferSelect;
 export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type Department = typeof departments.$inferSelect;
 export type InsertSlaSettings = z.infer<typeof insertSlaSettingsSchema>;

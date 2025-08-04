@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Complaint, type InsertComplaint, type ComplaintUpdate, type InsertComplaintUpdate, type Feedback, type InsertFeedback, type Department, type InsertDepartment, type SlaSettings, type InsertSlaSettings, type Notification, type InsertNotification, type AuditLog, type InsertAuditLog } from "@shared/schema";
+import { type User, type InsertUser, type Complaint, type InsertComplaint, type ComplaintUpdate, type InsertComplaintUpdate, type Feedback, type InsertFeedback, type ServiceFeedback, type InsertServiceFeedback, type Department, type InsertDepartment, type SlaSettings, type InsertSlaSettings, type Notification, type InsertNotification, type AuditLog, type InsertAuditLog } from "@shared/schema";
 import { randomUUID } from "crypto";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -27,6 +27,24 @@ export interface IStorage {
   getFeedbackByComplaint(complaintId: string): Promise<Feedback | undefined>;
   getAllFeedback(): Promise<Feedback[]>;
   createFeedback(feedback: InsertFeedback & { citizenId: string }): Promise<Feedback>;
+  
+  // Service Feedback methods
+  getAllServiceFeedback(): Promise<ServiceFeedback[]>;
+  getServiceFeedbackByCategory(category: string): Promise<ServiceFeedback[]>;
+  getServiceFeedbackByUser(citizenId: string): Promise<ServiceFeedback[]>;
+  createServiceFeedback(feedback: InsertServiceFeedback & { citizenId: string }): Promise<ServiceFeedback>;
+  getServiceFeedbackStats(): Promise<{
+    totalResponses: number;
+    averageRatings: {
+      overall: number;
+      serviceQuality: number;
+      responseTime: number;
+      staffBehavior: number;
+      accessibility: number;
+    };
+    byCategory: Record<string, number>;
+    recommendationRate: number;
+  }>;
   
   // Analytics methods
   getComplaintStats(): Promise<{
@@ -74,6 +92,7 @@ export class MemStorage implements IStorage {
   private complaints: Map<string, Complaint>;
   private complaintUpdates: Map<string, ComplaintUpdate[]>;
   private feedbacks: Map<string, Feedback>;
+  private serviceFeedbacks: Map<string, ServiceFeedback>;
   private departments: Map<string, Department>;
   private slaSettings: Map<string, SlaSettings>;
   private notifications: Map<string, Notification>;
@@ -85,6 +104,7 @@ export class MemStorage implements IStorage {
     this.complaints = new Map();
     this.complaintUpdates = new Map();
     this.feedbacks = new Map();
+    this.serviceFeedbacks = new Map();
     this.departments = new Map();
     this.slaSettings = new Map();
     this.notifications = new Map();
@@ -120,6 +140,9 @@ export class MemStorage implements IStorage {
         role: "admin",
         email: "admin@indore.gov.in",
         phone: "+91 9876543210",
+        fullName: "System Administrator",
+        address: "Indore Municipal Corporation",
+        preferredLanguage: "en",
         department: null,
       });
       console.log("Admin user created:", adminUser.username);
@@ -419,6 +442,111 @@ export class MemStorage implements IStorage {
     this.auditLogs.set(id, log);
     return log;
   }
+
+  // Service Feedback methods
+  async getAllServiceFeedback(): Promise<ServiceFeedback[]> {
+    return Array.from(this.serviceFeedbacks.values());
+  }
+
+  async getServiceFeedbackByCategory(category: string): Promise<ServiceFeedback[]> {
+    return Array.from(this.serviceFeedbacks.values()).filter(
+      (feedback) => feedback.serviceCategory === category
+    );
+  }
+
+  async getServiceFeedbackByUser(citizenId: string): Promise<ServiceFeedback[]> {
+    return Array.from(this.serviceFeedbacks.values()).filter(
+      (feedback) => feedback.citizenId === citizenId
+    );
+  }
+
+  async createServiceFeedback(feedbackData: InsertServiceFeedback & { citizenId: string }): Promise<ServiceFeedback> {
+    const id = randomUUID();
+    const feedback: ServiceFeedback = {
+      ...feedbackData,
+      id,
+      createdAt: new Date(),
+    };
+    this.serviceFeedbacks.set(id, feedback);
+    return feedback;
+  }
+
+  async getServiceFeedbackStats(): Promise<{
+    totalResponses: number;
+    averageRatings: {
+      overall: number;
+      serviceQuality: number;
+      responseTime: number;
+      staffBehavior: number;
+      accessibility: number;
+    };
+    byCategory: Record<string, number>;
+    recommendationRate: number;
+  }> {
+    const feedbacks = Array.from(this.serviceFeedbacks.values());
+    
+    if (feedbacks.length === 0) {
+      return {
+        totalResponses: 0,
+        averageRatings: {
+          overall: 0,
+          serviceQuality: 0,
+          responseTime: 0,
+          staffBehavior: 0,
+          accessibility: 0,
+        },
+        byCategory: {},
+        recommendationRate: 0,
+      };
+    }
+
+    const totalResponses = feedbacks.length;
+    
+    // Calculate average ratings
+    const sumRatings = feedbacks.reduce((acc, feedback) => ({
+      overall: acc.overall + feedback.overallRating,
+      serviceQuality: acc.serviceQuality + feedback.serviceQualityRating,
+      responseTime: acc.responseTime + feedback.responseTimeRating,
+      staffBehavior: acc.staffBehavior + feedback.staffBehaviorRating,
+      accessibility: acc.accessibility + feedback.accessibilityRating,
+    }), {
+      overall: 0,
+      serviceQuality: 0,
+      responseTime: 0,
+      staffBehavior: 0,
+      accessibility: 0,
+    });
+
+    const averageRatings = {
+      overall: sumRatings.overall / totalResponses,
+      serviceQuality: sumRatings.serviceQuality / totalResponses,
+      responseTime: sumRatings.responseTime / totalResponses,
+      staffBehavior: sumRatings.staffBehavior / totalResponses,
+      accessibility: sumRatings.accessibility / totalResponses,
+    };
+
+    // Count by category
+    const byCategory: Record<string, number> = {};
+    feedbacks.forEach(feedback => {
+      byCategory[feedback.serviceCategory] = (byCategory[feedback.serviceCategory] || 0) + 1;
+    });
+
+    // Calculate recommendation rate
+    const recommendCount = feedbacks.filter(f => f.wouldRecommend).length;
+    const recommendationRate = (recommendCount / totalResponses) * 100;
+
+    return {
+      totalResponses,
+      averageRatings,
+      byCategory,
+      recommendationRate,
+    };
+  }
 }
+
+// Keep the MemStorage as the current storage implementation
+// If you want to switch to database storage, uncomment the lines below
+// import { DatabaseStorage } from "./database-storage";
+// export const storage = new DatabaseStorage();
 
 export const storage = new MemStorage();

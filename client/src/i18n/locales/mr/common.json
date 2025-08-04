@@ -216,5 +216,81 @@
     "updated": "यशस्वीरित्या अपडेट केले",
     "deleted": "यशस्वीरित्या डिलीट केले",
     "submitted": "यशस्वीरित्या सबमिट केले"
+  },
+  "serviceFeedback": {
+    "title": "सेवा प्रतिक्रिया",
+    "subtitle": "आपला अनुभव शेअर करून आमच्या सेवा सुधारण्यास मदत करा",
+    "submitFeedback": "सेवा प्रतिक्रिया द्या",
+    "yourServiceFeedback": "आपली सेवा प्रतिक्रिया",
+    "generalServiceFeedback": "सामान्य सेवा प्रतिक्रिया",
+    "overallRating": "एकूण रेटिंग",
+    "serviceQualityRating": "सेवा गुणवत्ता रेटिंग",
+    "responseTimeRating": "प्रतिसाद वेळ रेटिंग",
+    "staffBehaviorRating": "कर्मचारी वर्तन रेटिंग",
+    "accessibilityRating": "प्रवेश योग्यता रेटिंग",
+    "suggestions": "सुधारणेसाठी सूचना",
+    "wouldRecommend": "आपण आमच्या सेवांची शिफारस कराल का?",
+    "specificDepartment": "विशिष्ट विभाग (वैकल्पिक)",
+    "serviceUsageFrequency": "आपण आमच्या सेवांचा किती वेळा वापर करता?",
+    "contactMethod": "आपण आमच्याशी कसा संपर्क साधला?",
+    "issues": "मुख्य समस्या",
+    "improvements": "सुधारणेची क्षेत्रे",
+    "isAnonymous": "नावशिवाय सबमिट करा",
+    "serviceCategory": "सेवा श्रेणी",
+    "feedbackSubmitted": "सेवा प्रतिक्रिया यशस्वीरित्या सबमिट केली",
+    "thankYou": "आमच्या सेवा सुधारण्यास मदत केल्याबद्दल धन्यवाद!",
+    "categories": {
+      "overall": "एकूण सरकारी सेवा",
+      "water_supply": "पाणी पुरवठा सेवा",
+      "roads": "रस्ते आणि वाहतूक",
+      "electricity": "वीज सेवा",
+      "sanitation": "स्वच्छता सेवा",
+      "street_lighting": "रस्ता प्रकाश",
+      "parks": "उद्याने आणि मनोरंजन",
+      "administration": "प्रशासन सेवा",
+      "online_services": "ऑनलाइन सेवा"
+    },
+    "frequencies": {
+      "daily": "दैनिक",
+      "weekly": "साप्ताहिक",
+      "monthly": "मासिक",
+      "rarely": "क्वचितच",
+      "first_time": "पहिल्यांदा"
+    },
+    "contactMethods": {
+      "online": "ऑनलाइन पोर्टल",
+      "phone": "फोन कॉल",
+      "in_person": "वैयक्तिकरित्या",
+      "email": "ईमेल",
+      "mobile_app": "मोबाइल अॅप"
+    },
+    "commonIssues": {
+      "long_wait_times": "प्रतीक्षेची लांब वेळ",
+      "poor_service_quality": "खराब सेवा गुणवत्ता",
+      "unhelpful_staff": "मदत न करणारे कर्मचारी",
+      "unclear_process": "अस्पष्ट प्रक्रिया",
+      "system_downtime": "सिस्टम डाउनटाइम",
+      "lack_of_information": "माहितीचा अभाव"
+    },
+    "improvementAreas": {
+      "faster_response": "जलद प्रतिसाद वेळ",
+      "better_communication": "चांगला संवाद",
+      "staff_training": "कर्मचारी प्रशिक्षण",
+      "system_upgrade": "सिस्टम अपग्रेड",
+      "clearer_guidelines": "स्पष्ट मार्गदर्शक तत्त्वे",
+      "more_accessibility": "चांगली प्रवेशयोग्यता"
+    },
+    "management": {
+      "title": "सेवा प्रतिक्रिया व्यवस्थापन",
+      "subtitle": "नागरी सेवा प्रतिक्रियांचे निरीक्षण आणि विश्लेषण करा",
+      "totalResponses": "एकूण प्रतिसाद",
+      "averageRatings": "सरासरी रेटिंग",
+      "recommendationRate": "शिफारस दर",
+      "responsesByCategory": "श्रेणी नुसार प्रतिसाद",
+      "allServiceFeedback": "सर्व सेवा प्रतिक्रिया",
+      "filterByCategory": "श्रेणी नुसार फिल्टर करा",
+      "exportData": "डेटा निर्यात करा",
+      "detailedAnalysis": "तपशीलवार विश्लेषण"
+    }
   }
 }

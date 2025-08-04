@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertComplaintSchema, insertComplaintUpdateSchema, insertFeedbackSchema, insertDepartmentSchema, insertSlaSettingsSchema, insertNotificationSchema } from "@shared/schema";
+import { insertComplaintSchema, insertComplaintUpdateSchema, insertFeedbackSchema, insertServiceFeedbackSchema, insertDepartmentSchema, insertSlaSettingsSchema, insertNotificationSchema } from "@shared/schema";
 import { z } from "zod";
 
 export function registerRoutes(app: Express): Server {
@@ -413,6 +413,77 @@ export function registerRoutes(app: Express): Server {
       res.json(logs);
     } catch (error) {
       res.status(500).json({ error: "Failed to get audit logs" });
+    }
+  });
+
+  // Service Feedback routes
+  app.get("/api/service-feedback", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      let feedbacks;
+      if (req.user!.role === "citizen") {
+        feedbacks = await storage.getServiceFeedbackByUser(req.user!.id);
+      } else {
+        feedbacks = await storage.getAllServiceFeedback();
+      }
+      res.json(feedbacks);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch service feedback" });
+    }
+  });
+
+  app.post("/api/service-feedback", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "citizen") return res.sendStatus(403);
+    
+    try {
+      const validatedData = insertServiceFeedbackSchema.parse(req.body);
+      const feedback = await storage.createServiceFeedback({
+        ...validatedData,
+        citizenId: req.user!.id,
+      });
+      
+      // Create audit log
+      await storage.createAuditLog({
+        userId: req.user!.id,
+        action: "CREATE_SERVICE_FEEDBACK",
+        resource: "service_feedback",
+        resourceId: feedback.id,
+        newValues: JSON.stringify(feedback),
+      });
+      
+      res.status(201).json(feedback);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid feedback data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create service feedback" });
+      }
+    }
+  });
+
+  app.get("/api/service-feedback/stats", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role === "citizen") return res.sendStatus(403);
+    
+    try {
+      const stats = await storage.getServiceFeedbackStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch service feedback stats" });
+    }
+  });
+
+  app.get("/api/service-feedback/category/:category", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role === "citizen") return res.sendStatus(403);
+    
+    try {
+      const feedbacks = await storage.getServiceFeedbackByCategory(req.params.category);
+      res.json(feedbacks);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch category feedback" });
     }
   });
 
