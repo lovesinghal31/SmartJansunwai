@@ -16,6 +16,9 @@ import AnalyticsPage from "@/pages/analytics-page";
 import FeaturesPage from "@/pages/features-page";
 import FeedbackPage from "@/pages/feedback-page";
 import ServiceFeedbackPage from "@/pages/service-feedback";
+import NewComplaintPage from "@/pages/NewComplaintPage";
+import DashboardPage from "@/pages/DashboardPage";
+import SearchPage from "@/pages/SearchPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -25,6 +28,9 @@ function Router() {
       <ProtectedRoute path="/citizen-dashboard" component={CitizenDashboard} />
       <ProtectedRoute path="/official-dashboard" component={OfficialDashboard} />
       <ProtectedRoute path="/admin-dashboard" component={AdminDashboard} />
+      <ProtectedRoute path="/dashboard" component={DashboardPage} />
+      <ProtectedRoute path="/complaints/new" component={NewComplaintPage} />
+      <ProtectedRoute path="/search" component={SearchPage} />
       <ProtectedRoute path="/chatbot" component={ChatbotPage} />
       <ProtectedRoute path="/complaint-map" component={ComplaintMapPage} />
       <ProtectedRoute path="/analytics" component={AnalyticsPage} />

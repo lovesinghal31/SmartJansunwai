@@ -2,11 +2,16 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
+import { classifyComplaint, generateResponseSuggestion, generateComplaintSuggestions, summarizeComplaintTrends } from "./gemini";
+import voiceRoutes from "./routes/voice";
 import { insertComplaintSchema, insertComplaintUpdateSchema, insertFeedbackSchema, insertServiceFeedbackSchema, insertDepartmentSchema, insertSlaSettingsSchema, insertNotificationSchema } from "@shared/schema";
 import { z } from "zod";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Voice processing routes
+  app.use('/api/voice', voiceRoutes);
 
   // Complaint routes
   app.get("/api/complaints", async (req, res) => {
@@ -49,11 +54,36 @@ export function registerRoutes(app: Express): Server {
     
     try {
       const validatedData = insertComplaintSchema.parse(req.body);
+      
+      // Use AI to classify and enhance the complaint
+      let aiClassification = null;
+      if (validatedData.description) {
+        try {
+          aiClassification = await classifyComplaint(validatedData.description);
+          
+          // Update complaint with AI suggestions if confidence is high
+          if (aiClassification.confidence > 0.7) {
+            if (!validatedData.category || validatedData.category === "other") {
+              validatedData.category = aiClassification.category;
+            }
+            if (validatedData.priority === "medium") {
+              validatedData.priority = aiClassification.priority;
+            }
+          }
+        } catch (error) {
+          console.error("AI classification failed:", error);
+        }
+      }
+      
       const complaint = await storage.createComplaint({
         ...validatedData,
         citizenId: req.user!.id,
       });
-      res.status(201).json(complaint);
+      
+      res.status(201).json({
+        ...complaint,
+        aiSuggestions: aiClassification
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid complaint data", errors: error.errors });
@@ -413,6 +443,24 @@ export function registerRoutes(app: Express): Server {
       res.json(logs);
     } catch (error) {
       res.status(500).json({ error: "Failed to get audit logs" });
+    }
+  });
+
+  // AI suggestions API
+  app.post("/api/ai/suggestions", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { text } = req.body;
+      if (!text || text.length < 10) {
+        return res.status(400).json({ error: "Text too short for suggestions" });
+      }
+      
+      const suggestions = await generateComplaintSuggestions(text);
+      res.json({ suggestions });
+    } catch (error) {
+      console.error("AI suggestions error:", error);
+      res.status(500).json({ error: "Failed to generate suggestions" });
     }
   });
 
