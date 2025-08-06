@@ -91,14 +91,14 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <Header />
       
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary-800 to-primary-900 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="text-white py-16 bg-[#2094f3]">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
+            <div className="grid">
               <h1 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
                 Smart Grievance Redressal for{" "}
                 <span className="text-yellow-300">Indore</span>
@@ -111,18 +111,18 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <Button 
                   size="lg" 
-                  className="bg-white text-primary-800 hover:bg-gray-100"
+                  className="bg-white text-black hover:bg-gray-300"
                   onClick={() => setShowComplaintForm(true)}
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-2 h-4 w-4 text-black" />
                   Submit New Complaint
                 </Button>
                 <Button 
                   size="lg" 
                   variant="outline"
-                  className="border-white text-white hover:bg-white hover:text-primary-800"
+                  className="border-white text-black hover:bg-gray-300"
                 >
-                  <Search className="mr-2 h-4 w-4" />
+                  <Search className="mr-2 h-4 w-4  text-black" />
                   Track Complaint
                 </Button>
               </div>
@@ -158,9 +158,9 @@ export default function HomePage() {
       </section>
 
       {/* Features Overview */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+      <section className="py-16 bg-primary-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-primary-800">
+          <div className="bg-primary-800 text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Platform Features</h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
               Advanced AI-powered tools and intuitive interfaces designed to streamline 

@@ -397,7 +397,7 @@ export default function OfficialDashboard() {
                           <SelectValue placeholder="Select new status (optional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No status change</SelectItem>
+                          <SelectItem value="none">No status change</SelectItem>
                           <SelectItem value="in-progress">In Progress</SelectItem>
                           <SelectItem value="under-review">Under Review</SelectItem>
                           <SelectItem value="resolved">Resolved</SelectItem>
