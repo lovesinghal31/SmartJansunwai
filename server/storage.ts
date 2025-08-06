@@ -2,6 +2,7 @@ import { type User, type InsertUser, type Complaint, type InsertComplaint, type 
 import { randomUUID } from "crypto";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import UserModel from "./models/user.model.js";
 import { MongoClient, Db, Collection } from "mongodb";
 import { connectToDatabase } from "./db";
 
@@ -138,26 +139,29 @@ export class MongoStorage implements IStorage {
 
   // User methods
   async getUser(id: string): Promise<User | undefined> {
-    const db = await this.ensureConnection();
-    const user = await db.collection('users').findOne({ id });
-    return user as User || undefined;
+    const user = await UserModel.findOne({ id }).lean();
+    return user as unknown as User || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const db = await this.ensureConnection();
-    const user = await db.collection('users').findOne({ username });
-    return user as User || undefined;
+    const user = await UserModel.findOne({ username }).lean();
+    return user as unknown as User || undefined;
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    const db = await this.ensureConnection();
-    const newUser: User = {
-      id: randomUUID(),
-      ...user,
-      createdAt: new Date(),
-    };
-    await db.collection('users').insertOne(newUser);
-    return newUser;
+    console.log('Attempting to create user:', user);
+    try {
+      const newUser = await UserModel.create({
+        id: randomUUID(),
+        ...user,
+        createdAt: new Date(),
+      });
+      console.log('User created successfully:', newUser);
+      return newUser.toObject() as User;
+    } catch (err) {
+      console.error('Error creating user:', err);
+      throw err;
+    }
   }
 
   // Complaint methods
@@ -417,29 +421,26 @@ export class MongoStorage implements IStorage {
   // User management methods
   async getAllUsers(): Promise<User[]> {
     const db = await this.ensureConnection();
-    const users = await db.collection('users').find({}).sort({ createdAt: -1 }).toArray();
-    return users as User[];
+    const users = await UserModel.find({}).sort({ createdAt: -1 }).lean();
+    return users as unknown as User[];
   }
 
   async getUsersByRole(role: string): Promise<User[]> {
-    const db = await this.ensureConnection();
-    const users = await db.collection('users').find({ role }).sort({ createdAt: -1 }).toArray();
-    return users as User[];
+    const users = await UserModel.find({ role }).sort({ createdAt: -1 }).lean();
+    return users as unknown as User[];
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const db = await this.ensureConnection();
-    const result = await db.collection('users').findOneAndUpdate(
+    const updatedUser = await UserModel.findOneAndUpdate(
       { id },
       { $set: updates },
-      { returnDocument: 'after' }
-    );
-    return result as User || undefined;
+      { new: true }
+    ).lean();
+    return updatedUser as unknown as User || undefined;
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    const db = await this.ensureConnection();
-    const result = await db.collection('users').deleteOne({ id });
+    const result = await UserModel.deleteOne({ id });
     return result.deletedCount > 0;
   }
 
