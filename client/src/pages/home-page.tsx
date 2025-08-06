@@ -106,7 +106,7 @@ export default function HomePage() {
       <Header />
       
       {/* Hero Section */}
-      <section className="text-white py-16 bg-[#2094f3]">
+      <section className="text-white py-16 min-h-screen bg-[#111827]">
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="grid">
@@ -156,7 +156,7 @@ export default function HomePage() {
             </div>
 
             {/* Quick Complaint Form */}
-            <Card className="bg-white shadow-2xl">
+            <Card className="bg-white shadow-2xl w-full max-w-2xl mx-auto p-6 lg:p-8">
               <CardHeader>
                 <CardTitle className="text-center text-gray-900">Quick Complaint Submission</CardTitle>
               </CardHeader>
