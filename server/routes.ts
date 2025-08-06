@@ -433,6 +433,45 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // AI Accuracy endpoint (dynamic calculation)
+  app.get("/api/ai/accuracy", async (req, res) => {
+    try {
+      // Use the internal db property directly since ensureConnection is private
+      let db = storage["db"];
+      if (!db) {
+        // Call initializeDatabase if db is not set
+        if (typeof storage["initializeDatabase"] === "function") {
+          await storage["initializeDatabase"]();
+          db = storage["db"];
+        }
+      }
+      if (!db) throw new Error("Database connection not available");
+      const complaints = await db.collection('complaints').find({}).toArray();
+      const feedbacks = await db.collection('feedback').find({}).toArray();
+      const total = complaints.length;
+
+      // Classification: complaints with a non-empty category
+      const classified = complaints.filter(c => c.category && c.category.trim() !== '').length;
+      const classification = total > 0 ? (classified / total) * 100 : 0;
+
+      // Prediction: complaints that have status not 'submitted'
+      const predicted = complaints.filter(c => c.status && c.status !== 'submitted').length;
+      const prediction = total > 0 ? (predicted / total) * 100 : 0;
+
+      // Sentiment: complaints that have feedback
+      const feedbackComplaintIds = new Set(feedbacks.map(f => f.complaintId));
+      const sentiment = total > 0 ? (Array.from(feedbackComplaintIds).length / total) * 100 : 0;
+
+      res.json({
+        classification: Number(classification.toFixed(1)),
+        prediction: Number(prediction.toFixed(1)),
+        sentiment: Number(sentiment.toFixed(1))
+      });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to calculate AI accuracy' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
