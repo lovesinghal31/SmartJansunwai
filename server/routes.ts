@@ -167,7 +167,7 @@ export function registerRoutes(app: Express): Server {
   // Analytics routes
   app.get("/api/analytics/stats", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (req.user!.role !== "official") return res.sendStatus(403);
+    if (req.user!.role !== "official" && req.user!.role !== "admin") return res.sendStatus(403);
     
     try {
       const stats = await storage.getComplaintStats();
