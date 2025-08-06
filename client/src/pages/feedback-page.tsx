@@ -20,8 +20,7 @@ import { MessageSquare, Star, Send, Filter, Calendar, User } from "lucide-react"
 const feedbackFormSchema = z.object({
   complaintId: z.string().min(1, "Please select a complaint"),
   rating: z.number().min(1).max(5),
-  comment: z.string().min(10, "Please provide at least 10 characters of feedback"),
-  category: z.enum(["service_quality", "response_time", "resolution_quality", "communication", "overall_experience"]),
+  comment: z.string().optional(),
 });
 
 export default function FeedbackPage() {
@@ -61,10 +60,20 @@ export default function FeedbackPage() {
       form.reset();
       setSelectedRating(0);
     },
-    onError: () => {
+    onError: async (error: any) => {
+      let message = "Please try again later";
+      if (error instanceof Error) {
+        message = error.message;
+        if ((error as any).response) {
+          try {
+            const data = await (error as any).response.json();
+            message = data.message || message;
+          } catch {}
+        }
+      }
       toast({ 
         title: "Failed to submit feedback", 
-        description: "Please try again later", 
+        description: message, 
         variant: "destructive" 
       });
     },
@@ -77,15 +86,17 @@ export default function FeedbackPage() {
       complaintId: "",
       rating: 1,
       comment: "",
-      category: "overall_experience" as const,
     },
   });
 
   const onSubmit = (data: any) => {
-    submitFeedbackMutation.mutate({
-      ...data,
+    const payload = {
+      complaintId: data.complaintId,
       rating: selectedRating,
-    });
+      comment: data.comment,
+    };
+    console.log('Submitting feedback:', payload);
+    submitFeedbackMutation.mutate(payload);
   };
 
   const StarRating = ({ rating, onRatingChange, readonly = false }: any) => (
@@ -166,31 +177,6 @@ export default function FeedbackPage() {
                                     {complaint.title} - {complaint.category}
                                   </SelectItem>
                                 ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="category"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Feedback Category</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="service_quality">Service Quality</SelectItem>
-                                <SelectItem value="response_time">Response Time</SelectItem>
-                                <SelectItem value="resolution_quality">Resolution Quality</SelectItem>
-                                <SelectItem value="communication">Communication</SelectItem>
-                                <SelectItem value="overall_experience">Overall Experience</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
