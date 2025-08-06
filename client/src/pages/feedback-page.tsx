@@ -49,6 +49,7 @@ export default function FeedbackPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        credentials: "include", // <-- ensure cookies/session are sent
       });
       if (!response.ok) throw new Error("Failed to submit feedback");
       return response.json();
