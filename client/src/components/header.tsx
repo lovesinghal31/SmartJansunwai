@@ -95,41 +95,43 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">JS</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Jansunwai</span>
+          <div className="flex-grow-0">
+            <div className="flex items-center justify-start flex-shrink-0">
+              <Link href="/">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-base">JS</span>
+                  </div>
+                  <span className="text-2xl font-bold text-gray-900">Jansunwai</span>
+                </div>
+              </Link>
             </div>
-          </Link>
+          </div>
 
           {/* Navigation */}
           <nav className="hidden md:flex space-x-8">
-            {navigation.map((item) => {
-              // Show all items to authenticated users, or only non-protected to unauthenticated
-              const shouldShow = !item.protected || user;
-              // Hide official-only items from citizens
-              const isOfficialOnly = item.officialOnly && user?.role !== "official";
-              // Hide admin-only items from non-admins
-              const isAdminOnly = item.adminOnly && user?.role !== "admin";
-              
-              if (!shouldShow || isOfficialOnly || isAdminOnly) return null;
-              
-              return (
-                <Link key={item.name} href={item.href}>
-                  <div className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    location === item.href
-                      ? "text-primary-600 bg-primary-50"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                  }`}>
-                    <item.icon size={16} />
-                    <span>{item.name}</span>
-                  </div>
-                </Link>
-              );
-            })}
-          </nav>
+          {navigation.map((item) => {
+            const shouldShow = !item.protected || user;
+            const isOfficialOnly = item.officialOnly && user?.role !== "official";
+            const isAdminOnly = item.adminOnly && user?.role !== "admin";
+            
+            if (!shouldShow || isOfficialOnly || isAdminOnly) return null;
+
+            return (
+              <Link key={item.name} href={item.href}>
+                <div className={`flex items-center space-x-2 px-4 py-3 rounded-md text-base font-medium transition-colors ${
+                  location === item.href
+                    ? "text-primary-600 bg-primary-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}>
+                  <item.icon size={20} /> {/* Increased icon size */}
+                  <span>{item.name}</span>
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
@@ -190,9 +192,9 @@ export default function Header() {
                 {/* User Menu */}
                 <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2">
-                    <User size={16} />
-                    <span className="hidden sm:inline">{user.username}</span>
+                  <Button variant="ghost" className="flex items-center space-x-3 text-lg px-4 py-2">
+                      <User size={24} />
+                      <span className="hidden sm:inline font-semibold">{user.username}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -240,8 +242,11 @@ export default function Header() {
 
           {/* Mobile menu button */}
           <div className="md:hidden">
-            <Button variant="ghost" size="sm">
-              <Menu size={20} />
+            <Button variant="ghost" className="flex items-center space-x-2">
+              <div className="w-9 h-9 border border-black rounded-full flex items-center justify-center">
+                <User size={35} className="text-black" />
+              </div>
+              {user && <span className="hidden sm:inline">{user.username}</span>}
             </Button>
           </div>
         </div>
