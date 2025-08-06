@@ -20,7 +20,8 @@ import {
   Rocket,
   Menu,
   Shield,
-  Bell
+  Bell,
+  Trash2
 } from "lucide-react";
 import LanguageSwitcher from "./language-switcher";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -40,13 +41,21 @@ export default function Header() {
     refetch: refetchNotifications,
   } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
-    enabled: false, // Only fetch when dropdown opens
+    enabled: !!user,
+    refetchInterval: 4000, // Poll every 4 seconds
   });
 
   // Mark as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("PUT", `/api/notifications/${id}/read`);
+    },
+  });
+
+  // Delete notification mutation
+  const deleteNotificationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/notifications/${id}`);
     },
   });
 
@@ -147,12 +156,27 @@ export default function Header() {
                       notifications.map((n: Notification) => (
                         <div
                           key={n.id}
-                          className={`px-4 py-2 border-b last:border-b-0 cursor-pointer transition-colors ${n.isRead ? "bg-white" : "bg-blue-50 hover:bg-blue-100"}`}
-                          onClick={() => handleNotificationClick(n)}
+                          className={`px-4 py-2 border-b last:border-b-0 transition-colors ${n.isRead ? "bg-white" : "bg-blue-50 hover:bg-blue-100"}`}
                         >
-                          <div className="font-semibold flex items-center">
-                            {n.title}
-                            {!n.isRead && <span className="ml-2 w-2 h-2 bg-blue-500 rounded-full inline-block" />}
+                          <div className="flex justify-between items-center">
+                            <div className="font-semibold flex items-center cursor-pointer" onClick={() => handleNotificationClick(n)}>
+                              {n.title}
+                              {!n.isRead && <span className="ml-2 w-2 h-2 bg-blue-500 rounded-full inline-block" />}
+                            </div>
+                            <button
+                              className="ml-2 p-1 text-red-500 hover:bg-red-100 rounded"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteNotificationMutation.mutate(n.id, {
+                                  onSuccess: () => refetchNotifications(),
+                                });
+                              }}
+                              title="Delete notification"
+                              aria-label="Delete notification"
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           </div>
                           <div className="text-sm text-gray-700">{n.message}</div>
                           <div className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString()}</div>
