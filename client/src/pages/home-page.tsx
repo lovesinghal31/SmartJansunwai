@@ -98,7 +98,7 @@ export default function HomePage() {
       <section className="bg-gradient-to-br from-primary-800 to-primary-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
+            <div className="bg-primary-900">
               <h1 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
                 Smart Grievance Redressal for{" "}
                 <span className="text-yellow-300">Indore</span>
@@ -111,7 +111,7 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <Button 
                   size="lg" 
-                  className="bg-white text-primary-800 hover:bg-gray-100"
+                  className="bg-white text black hover:bg-gray-100"
                   onClick={() => setShowComplaintForm(true)}
                 >
                   <Plus className="mr-2 h-4 w-4" />
@@ -214,7 +214,7 @@ export default function HomePage() {
           
           {/* Dashboard Preview */}
           <Card className="shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between bg-">
               <CardTitle>
                 {selectedDashboard === 'citizen' ? 'My Complaints' : 'Complaint Management'}
               </CardTitle>
