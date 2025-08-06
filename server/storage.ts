@@ -126,7 +126,7 @@ export class MongoStorage implements IStorage {
         try {
           await this.createUser({
             username: "admin",
-            password: "$2a$10$8K9hYRkBe.8uf4g5eFjPJ.v7wGLKqZKrz4Ucp4YLjQ2eVqz9sFOFK", // password: admin123
+            password: "b22f5d18277c8ab8f4a4099bb30a0e87c170fa0823753727313e513be259799f01a023fe561a8a59596909924a0fbdf03944ec3616d59aa13a77945763281695.24324cf84a7c4d1927efb9608ee561fd", // password: admin123
             role: "admin",
             email: "admin@indore.gov.in",
             phone: "+91 9876543210",
