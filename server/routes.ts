@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
+import { setupAuth, authenticateJWT } from "./auth";
 import { storage } from "./storage";
 import { insertComplaintSchema, insertComplaintUpdateSchema, insertFeedbackSchema, insertDepartmentSchema, insertSlaSettingsSchema, insertNotificationSchema } from "@shared/schema";
 import { z } from "zod";
@@ -9,9 +9,7 @@ export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
   // Complaint routes
-  app.get("/api/complaints", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+  app.get("/api/complaints", authenticateJWT, async (req, res) => {
     try {
       let complaints;
       if (req.user!.role === "citizen") {
@@ -25,28 +23,22 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/complaints/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+  app.get("/api/complaints/:id", authenticateJWT, async (req, res) => {
     try {
       const complaint = await storage.getComplaint(req.params.id);
       if (!complaint) return res.status(404).json({ message: "Complaint not found" });
-      
       // Citizens can only view their own complaints
       if (req.user!.role === "citizen" && complaint.citizenId !== req.user!.id) {
         return res.sendStatus(403);
       }
-      
       res.json(complaint);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch complaint" });
     }
   });
 
-  app.post("/api/complaints", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+  app.post("/api/complaints", authenticateJWT, async (req, res) => {
     if (req.user!.role !== "citizen") return res.sendStatus(403);
-    
     try {
       const validatedData = insertComplaintSchema.parse(req.body);
       const complaint = await storage.createComplaint({
@@ -63,14 +55,11 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.patch("/api/complaints/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+  app.patch("/api/complaints/:id", authenticateJWT, async (req, res) => {
     if (req.user!.role !== "official") return res.sendStatus(403);
-    
     try {
       const complaint = await storage.updateComplaint(req.params.id, req.body);
       if (!complaint) return res.status(404).json({ message: "Complaint not found" });
-      
       res.json(complaint);
     } catch (error) {
       res.status(500).json({ message: "Failed to update complaint" });
@@ -78,9 +67,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Complaint updates routes
-  app.get("/api/complaints/:id/updates", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+  app.get("/api/complaints/:id/updates", authenticateJWT, async (req, res) => {
     try {
       const updates = await storage.getComplaintUpdates(req.params.id);
       res.json(updates);
@@ -89,21 +76,17 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/complaints/:id/updates", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+  app.post("/api/complaints/:id/updates", authenticateJWT, async (req, res) => {
     if (req.user!.role !== "official") return res.sendStatus(403);
-    
     try {
       const validatedData = insertComplaintUpdateSchema.parse({
         ...req.body,
         complaintId: req.params.id,
       });
-      
       const update = await storage.createComplaintUpdate({
         ...validatedData,
         officialId: req.user!.id,
       });
-      
       res.status(201).json(update);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -115,9 +98,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Feedback routes
-  app.get("/api/complaints/:id/feedback", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+  app.get("/api/complaints/:id/feedback", authenticateJWT, async (req, res) => {
     try {
       const feedback = await storage.getFeedbackByComplaint(req.params.id);
       res.json(feedback);
@@ -126,21 +107,17 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/complaints/:id/feedback", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+  app.post("/api/complaints/:id/feedback", authenticateJWT, async (req, res) => {
     if (req.user!.role !== "citizen") return res.sendStatus(403);
-    
     try {
       const validatedData = insertFeedbackSchema.parse({
         ...req.body,
         complaintId: req.params.id,
       });
-      
       const feedback = await storage.createFeedback({
         ...validatedData,
         citizenId: req.user!.id,
       });
-      
       res.status(201).json(feedback);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -152,10 +129,8 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Get all feedback (for officials)
-  app.get("/api/feedback/all", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+  app.get("/api/feedback/all", authenticateJWT, async (req, res) => {
     if (req.user!.role !== "official" && req.user!.role !== "admin") return res.sendStatus(403);
-    
     try {
       const allFeedback = await storage.getAllFeedback();
       res.json(allFeedback);
@@ -165,10 +140,8 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Analytics routes
-  app.get("/api/analytics/stats", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+  app.get("/api/analytics/stats", authenticateJWT, async (req, res) => {
     if (req.user!.role !== "official" && req.user!.role !== "admin") return res.sendStatus(403);
-    
     try {
       const stats = await storage.getComplaintStats();
       res.json(stats);
@@ -178,11 +151,10 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Department management routes (Admin only)
-  app.get("/api/admin/departments", async (req, res) => {
-    if (!req.isAuthenticated() || req.user?.role !== "admin") {
+  app.get("/api/admin/departments", authenticateJWT, async (req, res) => {
+    if (req.user?.role !== "admin") {
       return res.sendStatus(401);
     }
-
     try {
       const departments = await storage.getAllDepartments();
       res.json(departments);
@@ -191,17 +163,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/admin/departments", async (req, res) => {
-    if (!req.isAuthenticated() || req.user?.role !== "admin") {
+  app.post("/api/admin/departments", authenticateJWT, async (req, res) => {
+    if (req.user?.role !== "admin") {
       return res.sendStatus(401);
     }
-
     try {
       const result = insertDepartmentSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.issues });
       }
-
       const department = await storage.createDepartment(result.data);
       await storage.createAuditLog({
         userId: req.user.id,
@@ -216,18 +186,16 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.put("/api/admin/departments/:id", async (req, res) => {
-    if (!req.isAuthenticated() || req.user?.role !== "admin") {
+  app.put("/api/admin/departments/:id", authenticateJWT, async (req, res) => {
+    if (req.user?.role !== "admin") {
       return res.sendStatus(401);
     }
-
     try {
       const oldDepartment = await storage.getDepartment(req.params.id);
       const updated = await storage.updateDepartment(req.params.id, req.body);
       if (!updated) {
         return res.status(404).json({ error: "Department not found" });
       }
-
       await storage.createAuditLog({
         userId: req.user.id,
         action: "UPDATE_DEPARTMENT",
@@ -242,18 +210,16 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.delete("/api/admin/departments/:id", async (req, res) => {
-    if (!req.isAuthenticated() || req.user?.role !== "admin") {
+  app.delete("/api/admin/departments/:id", authenticateJWT, async (req, res) => {
+    if (req.user?.role !== "admin") {
       return res.sendStatus(401);
     }
-
     try {
       const department = await storage.getDepartment(req.params.id);
       const success = await storage.deleteDepartment(req.params.id);
       if (!success) {
         return res.status(404).json({ error: "Department not found" });
       }
-
       await storage.createAuditLog({
         userId: req.user.id,
         action: "DELETE_DEPARTMENT",
@@ -268,11 +234,10 @@ export function registerRoutes(app: Express): Server {
   });
 
   // SLA Settings routes (Admin only)
-  app.get("/api/admin/sla-settings", async (req, res) => {
-    if (!req.isAuthenticated() || req.user?.role !== "admin") {
+  app.get("/api/admin/sla-settings", authenticateJWT, async (req, res) => {
+    if (req.user?.role !== "admin") {
       return res.sendStatus(401);
     }
-
     try {
       const departmentId = req.query.departmentId as string;
       const settings = await storage.getSlaSettings(departmentId);
@@ -282,17 +247,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/admin/sla-settings", async (req, res) => {
-    if (!req.isAuthenticated() || req.user?.role !== "admin") {
+  app.post("/api/admin/sla-settings", authenticateJWT, async (req, res) => {
+    if (req.user?.role !== "admin") {
       return res.sendStatus(401);
     }
-
     try {
       const result = insertSlaSettingsSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.issues });
       }
-
       const sla = await storage.createSlaSettings(result.data);
       await storage.createAuditLog({
         userId: req.user.id,
@@ -308,11 +271,10 @@ export function registerRoutes(app: Express): Server {
   });
 
   // User management routes (Admin only)
-  app.get("/api/admin/users", async (req, res) => {
-    if (!req.isAuthenticated() || req.user?.role !== "admin") {
+  app.get("/api/admin/users", authenticateJWT, async (req, res) => {
+    if (req.user?.role !== "admin") {
       return res.sendStatus(401);
     }
-
     try {
       const role = req.query.role as string;
       const users = role ? await storage.getUsersByRole(role) : await storage.getAllUsers();
@@ -324,11 +286,10 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.put("/api/admin/users/:id", async (req, res) => {
-    if (!req.isAuthenticated() || req.user?.role !== "admin") {
+  app.put("/api/admin/users/:id", authenticateJWT, async (req, res) => {
+    if (req.user?.role !== "admin") {
       return res.sendStatus(401);
     }
-
     try {
       const { password, ...updates } = req.body;
       const oldUser = await storage.getUser(req.params.id);
@@ -336,7 +297,6 @@ export function registerRoutes(app: Express): Server {
       if (!updated) {
         return res.status(404).json({ error: "User not found" });
       }
-
       await storage.createAuditLog({
         userId: req.user.id,
         action: "UPDATE_USER",
@@ -345,7 +305,6 @@ export function registerRoutes(app: Express): Server {
         oldValues: JSON.stringify({ ...oldUser, password: "[REDACTED]" }),
         newValues: JSON.stringify({ ...updated, password: "[REDACTED]" }),
       });
-      
       const { password: _, ...safeUser } = updated;
       res.json(safeUser);
     } catch (error) {
@@ -354,11 +313,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Notification routes
-  app.get("/api/notifications", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
+  app.get("/api/notifications", authenticateJWT, async (req, res) => {
     try {
       const notifications = await storage.getNotifications(req.user.id);
       res.json(notifications);
@@ -367,17 +322,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/admin/notifications", async (req, res) => {
-    if (!req.isAuthenticated() || req.user?.role !== "admin") {
+  app.post("/api/admin/notifications", authenticateJWT, async (req, res) => {
+    if (req.user?.role !== "admin") {
       return res.sendStatus(401);
     }
-
     try {
       const result = insertNotificationSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.issues });
       }
-
       const notification = await storage.createNotification(result.data);
       res.status(201).json(notification);
     } catch (error) {
@@ -385,11 +338,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.put("/api/notifications/:id/read", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
+  app.put("/api/notifications/:id/read", authenticateJWT, async (req, res) => {
     try {
       const success = await storage.markNotificationRead(req.params.id);
       if (!success) {
@@ -402,11 +351,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Delete notification
-  app.delete("/api/notifications/:id", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
+  app.delete("/api/notifications/:id", authenticateJWT, async (req, res) => {
     try {
       const success = await storage.deleteNotification(req.params.id);
       if (!success) {
@@ -419,11 +364,10 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Audit logs (Admin only)
-  app.get("/api/admin/audit-logs", async (req, res) => {
-    if (!req.isAuthenticated() || req.user?.role !== "admin") {
+  app.get("/api/admin/audit-logs", authenticateJWT, async (req, res) => {
+    if (req.user?.role !== "admin") {
       return res.sendStatus(401);
     }
-
     try {
       const userId = req.query.userId as string;
       const logs = await storage.getAuditLogs(userId);
@@ -449,19 +393,15 @@ export function registerRoutes(app: Express): Server {
       const complaints = await db.collection('complaints').find({}).toArray();
       const feedbacks = await db.collection('feedback').find({}).toArray();
       const total = complaints.length;
-
       // Classification: complaints with a non-empty category
       const classified = complaints.filter(c => c.category && c.category.trim() !== '').length;
       const classification = total > 0 ? (classified / total) * 100 : 0;
-
       // Prediction: complaints that have status not 'submitted'
       const predicted = complaints.filter(c => c.status && c.status !== 'submitted').length;
       const prediction = total > 0 ? (predicted / total) * 100 : 0;
-
       // Sentiment: complaints that have feedback
       const feedbackComplaintIds = new Set(feedbacks.map(f => f.complaintId));
       const sentiment = total > 0 ? (Array.from(feedbackComplaintIds).length / total) * 100 : 0;
-
       res.json({
         classification: Number(classification.toFixed(1)),
         prediction: Number(prediction.toFixed(1)),
