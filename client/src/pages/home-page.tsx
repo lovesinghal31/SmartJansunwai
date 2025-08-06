@@ -21,11 +21,22 @@ import {
   BarChart3,
   Heart
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function HomePage() {
   const { user } = useAuth();
   const [showComplaintForm, setShowComplaintForm] = useState(false);
   const [selectedDashboard, setSelectedDashboard] = useState<'citizen' | 'official'>('citizen');
+
+  // Fetch AI accuracy rates
+  const { data: aiAccuracy, isLoading: aiLoading } = useQuery({
+    queryKey: ["/api/ai/accuracy"],
+    queryFn: async () => {
+      const res = await fetch("/api/ai/accuracy", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch AI accuracy");
+      return res.json();
+    },
+  });
 
   const features = [
     {
@@ -71,21 +82,21 @@ export default function HomePage() {
       icon: Brain,
       title: "Smart Classification",
       description: "Automatically categorize complaints and route them to the appropriate department using NLP.",
-      accuracy: "94.2%",
+      accuracy: aiLoading || !aiAccuracy ? "--" : `${aiAccuracy.classification}%`,
       color: "from-purple-50 to-blue-50 border-purple-100"
     },
     {
       icon: BarChart3,
       title: "Predictive Analytics",
       description: "Forecast complaint trends and identify potential issues before they escalate.",
-      accuracy: "87.5%",
+      accuracy: aiLoading || !aiAccuracy ? "--" : `${aiAccuracy.prediction}%`,
       color: "from-green-50 to-emerald-50 border-green-100"
     },
     {
       icon: Heart,
       title: "Sentiment Analysis",
       description: "Understand citizen emotions and prioritize complaints based on urgency and sentiment.",
-      accuracy: "91.8%",
+      accuracy: aiLoading || !aiAccuracy ? "--" : `${aiAccuracy.sentiment}%`,
       color: "from-orange-50 to-red-50 border-orange-100"
     }
   ];
