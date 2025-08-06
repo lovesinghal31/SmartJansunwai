@@ -1,4 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
+import '../server/loadEnv';
+import { connectMongoose } from './mongoose';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -36,7 +38,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Ensure Mongoose is connected before starting the server
 (async () => {
+  await connectMongoose();
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
