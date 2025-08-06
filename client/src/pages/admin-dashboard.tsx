@@ -56,10 +56,13 @@ const slaFormSchema = z.object({
 
 const notificationFormSchema = z.object({
   userId: z.string().min(1, "User is required"),
-  type: z.enum(["info", "warning", "error", "success"]),
+  type: z.string().min(1, "Type is required"),
+  category: z.string().min(1, "Category is required"),
   title: z.string().min(1, "Title is required"),
   message: z.string().min(1, "Message is required"),
   actionUrl: z.string().optional(),
+  metadata: z.string().optional(),
+  expiresAt: z.date().optional(),
 });
 
 const userUpdateFormSchema = z.object({
@@ -185,10 +188,13 @@ export default function AdminDashboard() {
   // Notification mutation
   const createNotificationMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Ensure expiresAt is sent as a date or omitted
+      const payload = { ...data };
+      if (!payload.expiresAt) delete payload.expiresAt;
       const response = await fetch("/api/admin/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       if (!response.ok) throw new Error("Failed to create notification");
       return response.json();
@@ -228,10 +234,13 @@ export default function AdminDashboard() {
     resolver: zodResolver(notificationFormSchema),
     defaultValues: {
       userId: "",
-      type: "info" as const,
+      type: "info",
+      category: "general",
       title: "",
       message: "",
       actionUrl: "",
+      metadata: "",
+      expiresAt: undefined,
     },
   });
 
@@ -941,7 +950,7 @@ export default function AdminDashboard() {
 
       {/* Notification Dialog */}
       <Dialog open={notificationDialog} onOpenChange={setNotificationDialog}>
-        <DialogContent>
+        <DialogContent style={{ maxHeight: '80vh', overflowY: 'auto' }}>
           <DialogHeader>
             <DialogTitle>Send Notification</DialogTitle>
             <DialogDescription>
@@ -999,6 +1008,28 @@ export default function AdminDashboard() {
               />
               <FormField
                 control={notificationForm.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="alert">Alert</SelectItem>
+                        <SelectItem value="update">Update</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={notificationForm.control}
                 name="title"
                 render={({ field }) => (
                   <FormItem>
@@ -1031,6 +1062,32 @@ export default function AdminDashboard() {
                     <FormLabel>Action URL (Optional)</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="/dashboard" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={notificationForm.control}
+                name="metadata"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Metadata (Optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Additional data in JSON format" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={notificationForm.control}
+                name="expiresAt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Expiration Time (Optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="datetime-local" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
