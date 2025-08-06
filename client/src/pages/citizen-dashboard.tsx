@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Filter } from "lucide-react";
 import type { Complaint } from "@shared/schema";
 
+export default function CitizenDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState([]);
