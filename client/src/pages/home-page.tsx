@@ -214,7 +214,7 @@ export default function HomePage() {
           
           {/* Dashboard Preview */}
           <Card className="shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between bg-">
               <CardTitle>
                 {selectedDashboard === 'citizen' ? 'My Complaints' : 'Complaint Management'}
               </CardTitle>
