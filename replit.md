@@ -6,7 +6,7 @@ A full-stack municipal complaint management system built with modern web technol
 ## Architecture
 - **Frontend**: React + TypeScript with Vite
 - **Backend**: Express.js + TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
+- **Database**: MongoDB with native MongoDB driver
 - **UI**: Shadcn/ui + Tailwind CSS
 - **State Management**: TanStack Query
 - **Routing**: Wouter
@@ -50,8 +50,11 @@ A full-stack municipal complaint management system built with modern web technol
 
 ## Recent Changes
 - **Migration from Replit Agent**: Project migrated to standard Replit environment (Complete - August 6, 2025)
-- **Dependencies**: Installed missing cross-env and tsx packages
-- **Server Status**: Successfully running on port 5000 with automatic admin user creation
+- **Database Migration**: Successfully migrated from PostgreSQL to MongoDB (Complete - August 6, 2025)
+- **Dependencies**: Updated packages - removed Drizzle ORM, added MongoDB driver and Mongoose
+- **Schema Update**: Converted PostgreSQL schema to MongoDB documents with proper TypeScript interfaces
+- **Storage Layer**: Rewritten storage interface to use MongoDB collections with proper indexing
+- **Server Status**: Running on port 5000 with MongoDB connection and automatic admin user creation
 
 ## User Preferences
 - Clean, modern UI design
@@ -59,12 +62,20 @@ A full-stack municipal complaint management system built with modern web technol
 - Security-focused development practices
 
 ## Environment Variables
-- `DATABASE_URL`: PostgreSQL connection string
+- `MONGODB_URI`: MongoDB connection string
+- `DATABASE_NAME`: MongoDB database name (default: municipal_complaints)
 - `NODE_ENV`: Environment mode (development/production)
 - `PORT`: Server port (default: 5000)
 
 ## Database Schema
-Managed through Drizzle ORM with migrations in `shared/schema.ts`
+MongoDB collections with TypeScript interfaces defined in `shared/schema.ts`. Collections include:
+- users: User accounts with role-based access
+- complaints: Citizen complaints with status tracking
+- complaint_updates: Status updates and comments
+- feedback: Citizen feedback on resolved complaints
+- departments: Municipal departments and their SLA settings
+- notifications: User notifications
+- audit_logs: System audit trail
 
 ## Deployment
 The application is configured for Replit deployment with proper port binding and static file serving.
