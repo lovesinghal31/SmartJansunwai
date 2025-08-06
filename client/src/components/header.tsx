@@ -115,25 +115,24 @@ export default function Header() {
 
   return (
     <header className="bg-white shadow-sm border-b">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-0">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex-grow-0">
-            <div className="flex items-center justify-start flex-shrink-0">
+          <div className="flex items-center space-x-3">
               <Link href="/">
                 <div className="flex items-center space-x-3">
                   <img
                     src={Logo}
                     alt="Samadhan+"
-                    className="h-20 w-20 object-contain rounded"
+                    className="h-12 w-12 object-contain rounded"
                   />
-                  <span className="text-xl font-bold text-gray-900">
+                  <span className="text-2xl font-bold text-gray-900 leading-none">
                     SAMADHAN+
                   </span>
                 </div>
               </Link>
-            </div>
           </div>
+
 
           {/* Navigation */}
           <nav className="hidden md:flex space-x-8">
@@ -163,7 +162,7 @@ export default function Header() {
           </nav>
 
           {/* User Menu */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 mr-2">
             {user ? (
               <>
                 {/* Notification Button */}
