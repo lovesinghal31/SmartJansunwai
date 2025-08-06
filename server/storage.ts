@@ -2,6 +2,8 @@ import { type User, type InsertUser, type Complaint, type InsertComplaint, type 
 import { randomUUID } from "crypto";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import { MongoClient, Db, Collection } from "mongodb";
+import { connectToDatabase } from "./db";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -69,356 +71,397 @@ export interface IStorage {
   sessionStore: any;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private complaints: Map<string, Complaint>;
-  private complaintUpdates: Map<string, ComplaintUpdate[]>;
-  private feedbacks: Map<string, Feedback>;
-  private departments: Map<string, Department>;
-  private slaSettings: Map<string, SlaSettings>;
-  private notifications: Map<string, Notification>;
-  private auditLogs: Map<string, AuditLog>;
+export class MongoStorage implements IStorage {
+  private db: Db | null = null;
   public sessionStore: any;
 
   constructor() {
-    this.users = new Map();
-    this.complaints = new Map();
-    this.complaintUpdates = new Map();
-    this.feedbacks = new Map();
-    this.departments = new Map();
-    this.slaSettings = new Map();
-    this.notifications = new Map();
-    this.auditLogs = new Map();
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
     });
+    this.initializeDatabase();
+  }
 
-    // Initialize with default data
-    this.initializeDefaultData();
+  private async initializeDatabase() {
+    try {
+      this.db = await connectToDatabase();
+      await this.initializeDefaultData();
+    } catch (error) {
+      console.error('Failed to connect to MongoDB:', error);
+    }
+  }
+
+  private async ensureConnection(): Promise<Db> {
+    if (!this.db) {
+      this.db = await connectToDatabase();
+    }
+    return this.db;
   }
 
   private async initializeDefaultData() {
-    // Initialize default departments
-    const defaultDepartments = [
-      { name: "Water Supply & Sewerage", description: "Water supply, sewerage, and drainage issues", slaHours: 48 },
-      { name: "Roads & Transportation", description: "Road repairs, traffic signals, and transportation", slaHours: 72 },
-      { name: "Electricity", description: "Power supply and electrical infrastructure", slaHours: 24 },
-      { name: "Sanitation", description: "Waste management and cleanliness", slaHours: 48 },
-      { name: "Street Lighting", description: "Street lights and public lighting", slaHours: 24 },
-      { name: "Parks & Recreation", description: "Parks, gardens, and recreational facilities", slaHours: 96 },
-    ];
-
-    for (const dept of defaultDepartments) {
-      await this.createDepartment(dept);
-    }
-
-    // Initialize default admin user
     try {
-      const adminUser = await this.createUser({
-        username: "admin",
-        password: "$2a$10$8K9hYRkBe.8uf4g5eFjPJ.v7wGLKqZKrz4Ucp4YLjQ2eVqz9sFOFK", // password: admin123
-        role: "admin",
-        email: "admin@indore.gov.in",
-        phone: "+91 9876543210",
-        department: null,
-      });
-      console.log("Admin user created:", adminUser.username);
+      const db = await this.ensureConnection();
+      
+      // Initialize default departments
+      const departments = await db.collection('departments').countDocuments();
+      if (departments === 0) {
+        const defaultDepartments = [
+          { name: "Water Supply & Sewerage", description: "Water supply, sewerage, and drainage issues", slaHours: 48, isActive: true },
+          { name: "Roads & Transportation", description: "Road repairs, traffic signals, and transportation", slaHours: 72, isActive: true },
+          { name: "Electricity", description: "Power supply and electrical infrastructure", slaHours: 24, isActive: true },
+          { name: "Sanitation", description: "Waste management and cleanliness", slaHours: 48, isActive: true },
+          { name: "Street Lighting", description: "Street lights and public lighting", slaHours: 24, isActive: true },
+          { name: "Parks & Recreation", description: "Parks, gardens, and recreational facilities", slaHours: 96, isActive: true },
+        ];
+
+        for (const dept of defaultDepartments) {
+          await this.createDepartment(dept);
+        }
+      }
+
+      // Initialize default admin user
+      const adminExists = await db.collection('users').findOne({ username: 'admin' });
+      if (!adminExists) {
+        await this.createUser({
+          username: "admin",
+          password: "$2a$10$8K9hYRkBe.8uf4g5eFjPJ.v7wGLKqZKrz4Ucp4YLjQ2eVqz9sFOFK", // password: admin123
+          role: "admin",
+          email: "admin@indore.gov.in",
+          phone: "+91 9876543210",
+        });
+        console.log("Admin user created: admin");
+      }
     } catch (error) {
-      console.log("Admin user may already exist");
+      console.error('Error initializing default data:', error);
     }
   }
 
+  // User methods
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const db = await this.ensureConnection();
+    const user = await db.collection('users').findOne({ id });
+    return user as User || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const db = await this.ensureConnection();
+    const user = await db.collection('users').findOne({ username });
+    return user as User || undefined;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { 
-      ...insertUser,
-      role: insertUser.role || "citizen",
-      department: insertUser.department || null,
-      id,
+  async createUser(user: InsertUser): Promise<User> {
+    const db = await this.ensureConnection();
+    const newUser: User = {
+      id: randomUUID(),
+      ...user,
       createdAt: new Date(),
     };
-    this.users.set(id, user);
-    return user;
+    await db.collection('users').insertOne(newUser);
+    return newUser;
   }
 
+  // Complaint methods
   async getComplaint(id: string): Promise<Complaint | undefined> {
-    return this.complaints.get(id);
+    const db = await this.ensureConnection();
+    const complaint = await db.collection('complaints').findOne({ id });
+    return complaint as Complaint || undefined;
   }
 
   async getComplaintsByUser(citizenId: string): Promise<Complaint[]> {
-    return Array.from(this.complaints.values()).filter(
-      (complaint) => complaint.citizenId === citizenId
-    );
+    const db = await this.ensureConnection();
+    const complaints = await db.collection('complaints').find({ citizenId }).sort({ createdAt: -1 }).toArray();
+    return complaints as Complaint[];
   }
 
   async getComplaintsByStatus(status: string): Promise<Complaint[]> {
-    return Array.from(this.complaints.values()).filter(
-      (complaint) => complaint.status === status
-    );
+    const db = await this.ensureConnection();
+    const complaints = await db.collection('complaints').find({ status }).sort({ createdAt: -1 }).toArray();
+    return complaints as Complaint[];
   }
 
   async getAllComplaints(): Promise<Complaint[]> {
-    return Array.from(this.complaints.values());
+    const db = await this.ensureConnection();
+    const complaints = await db.collection('complaints').find({}).sort({ createdAt: -1 }).toArray();
+    return complaints as Complaint[];
   }
 
-  async createComplaint(complaintData: InsertComplaint & { citizenId: string }): Promise<Complaint> {
-    const id = randomUUID();
-    const complaint: Complaint = {
-      ...complaintData,
-      id,
-      status: "submitted",
-      priority: complaintData.priority || "medium",
-      attachments: null,
-      assignedTo: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+  async createComplaint(complaint: InsertComplaint & { citizenId: string }): Promise<Complaint> {
+    const db = await this.ensureConnection();
+    const now = new Date();
+    const newComplaint: Complaint = {
+      id: randomUUID(),
+      ...complaint,
+      status: 'submitted',
+      priority: complaint.priority || 'medium',
+      attachments: complaint.attachments || [],
+      createdAt: now,
+      updatedAt: now,
     };
-    this.complaints.set(id, complaint);
-    return complaint;
+    await db.collection('complaints').insertOne(newComplaint);
+    return newComplaint;
   }
 
   async updateComplaint(id: string, updates: Partial<Complaint>): Promise<Complaint | undefined> {
-    const complaint = this.complaints.get(id);
-    if (!complaint) return undefined;
-    
-    const updatedComplaint = {
-      ...complaint,
-      ...updates,
-      updatedAt: new Date(),
-    };
-    this.complaints.set(id, updatedComplaint);
-    return updatedComplaint;
+    const db = await this.ensureConnection();
+    const updatedComplaint = { ...updates, updatedAt: new Date() };
+    const result = await db.collection('complaints').findOneAndUpdate(
+      { id },
+      { $set: updatedComplaint },
+      { returnDocument: 'after' }
+    );
+    return result as Complaint || undefined;
   }
 
+  // Complaint update methods
   async getComplaintUpdates(complaintId: string): Promise<ComplaintUpdate[]> {
-    return this.complaintUpdates.get(complaintId) || [];
+    const db = await this.ensureConnection();
+    const updates = await db.collection('complaint_updates').find({ complaintId }).sort({ createdAt: -1 }).toArray();
+    return updates as ComplaintUpdate[];
   }
 
-  async createComplaintUpdate(updateData: InsertComplaintUpdate & { officialId?: string }): Promise<ComplaintUpdate> {
-    const id = randomUUID();
-    const update: ComplaintUpdate = {
-      ...updateData,
-      id,
-      officialId: updateData.officialId || null,
+  async createComplaintUpdate(update: InsertComplaintUpdate & { officialId?: string }): Promise<ComplaintUpdate> {
+    const db = await this.ensureConnection();
+    const newUpdate: ComplaintUpdate = {
+      id: randomUUID(),
+      ...update,
       createdAt: new Date(),
     };
-    
-    const existing = this.complaintUpdates.get(updateData.complaintId) || [];
-    existing.push(update);
-    this.complaintUpdates.set(updateData.complaintId, existing);
-    
-    return update;
+    await db.collection('complaint_updates').insertOne(newUpdate);
+    return newUpdate;
   }
 
+  // Feedback methods
   async getFeedbackByComplaint(complaintId: string): Promise<Feedback | undefined> {
-    return Array.from(this.feedbacks.values()).find(
-      (feedback) => feedback.complaintId === complaintId
-    );
+    const db = await this.ensureConnection();
+    const feedback = await db.collection('feedback').findOne({ complaintId });
+    return feedback as Feedback || undefined;
   }
 
   async getAllFeedback(): Promise<Feedback[]> {
-    return Array.from(this.feedbacks.values());
+    const db = await this.ensureConnection();
+    const feedback = await db.collection('feedback').find({}).sort({ createdAt: -1 }).toArray();
+    return feedback as Feedback[];
   }
 
-  async createFeedback(feedbackData: InsertFeedback & { citizenId: string }): Promise<Feedback> {
-    const id = randomUUID();
-    const feedback: Feedback = {
-      ...feedbackData,
-      id,
+  async createFeedback(feedback: InsertFeedback & { citizenId: string }): Promise<Feedback> {
+    const db = await this.ensureConnection();
+    const newFeedback: Feedback = {
+      id: randomUUID(),
+      ...feedback,
       createdAt: new Date(),
     };
-    this.feedbacks.set(id, feedback);
-    return feedback;
+    await db.collection('feedback').insertOne(newFeedback);
+    return newFeedback;
   }
 
+  // Analytics methods
   async getComplaintStats(): Promise<{
     total: number;
     byStatus: Record<string, number>;
     byCategory: Record<string, number>;
     byPriority: Record<string, number>;
   }> {
-    const complaints = Array.from(this.complaints.values());
+    const db = await this.ensureConnection();
+    const complaints = await db.collection('complaints').find({}).toArray();
     
-    const byStatus: Record<string, number> = {};
-    const byCategory: Record<string, number> = {};
-    const byPriority: Record<string, number> = {};
-    
-    complaints.forEach(complaint => {
-      byStatus[complaint.status] = (byStatus[complaint.status] || 0) + 1;
-      byCategory[complaint.category] = (byCategory[complaint.category] || 0) + 1;
-      byPriority[complaint.priority] = (byPriority[complaint.priority] || 0) + 1;
-    });
-    
-    return {
+    const stats = {
       total: complaints.length,
-      byStatus,
-      byCategory,
-      byPriority,
+      byStatus: {} as Record<string, number>,
+      byCategory: {} as Record<string, number>,
+      byPriority: {} as Record<string, number>,
     };
+
+    complaints.forEach(complaint => {
+      // Status stats
+      stats.byStatus[complaint.status] = (stats.byStatus[complaint.status] || 0) + 1;
+      // Category stats
+      stats.byCategory[complaint.category] = (stats.byCategory[complaint.category] || 0) + 1;
+      // Priority stats
+      stats.byPriority[complaint.priority] = (stats.byPriority[complaint.priority] || 0) + 1;
+    });
+
+    return stats;
   }
 
   // Department methods
   async getAllDepartments(): Promise<Department[]> {
-    return Array.from(this.departments.values());
+    const db = await this.ensureConnection();
+    const departments = await db.collection('departments').find({ isActive: true }).toArray();
+    return departments as Department[];
   }
 
   async getDepartment(id: string): Promise<Department | undefined> {
-    return this.departments.get(id);
+    const db = await this.ensureConnection();
+    const department = await db.collection('departments').findOne({ id });
+    return department as Department || undefined;
   }
 
-  async createDepartment(departmentData: InsertDepartment): Promise<Department> {
-    const id = randomUUID();
-    const department: Department = {
-      ...departmentData,
-      id,
-      headOfficialId: departmentData.headOfficialId || null,
-      contactEmail: departmentData.contactEmail || null,
-      contactPhone: departmentData.contactPhone || null,
-      slaHours: departmentData.slaHours || 72,
-      isActive: departmentData.isActive ?? true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+  async createDepartment(department: InsertDepartment): Promise<Department> {
+    const db = await this.ensureConnection();
+    const now = new Date();
+    const newDepartment: Department = {
+      id: randomUUID(),
+      ...department,
+      slaHours: department.slaHours || 72,
+      isActive: department.isActive !== false,
+      createdAt: now,
+      updatedAt: now,
     };
-    this.departments.set(id, department);
-    return department;
+    await db.collection('departments').insertOne(newDepartment);
+    return newDepartment;
   }
 
   async updateDepartment(id: string, updates: Partial<Department>): Promise<Department | undefined> {
-    const department = this.departments.get(id);
-    if (!department) return undefined;
-    
-    const updated = { ...department, ...updates, updatedAt: new Date() };
-    this.departments.set(id, updated);
-    return updated;
+    const db = await this.ensureConnection();
+    const updatedDepartment = { ...updates, updatedAt: new Date() };
+    const result = await db.collection('departments').findOneAndUpdate(
+      { id },
+      { $set: updatedDepartment },
+      { returnDocument: 'after' }
+    );
+    return result as Department || undefined;
   }
 
   async deleteDepartment(id: string): Promise<boolean> {
-    return this.departments.delete(id);
+    const db = await this.ensureConnection();
+    const result = await db.collection('departments').updateOne(
+      { id },
+      { $set: { isActive: false, updatedAt: new Date() } }
+    );
+    return result.modifiedCount > 0;
   }
 
   // SLA Settings methods
   async getSlaSettings(departmentId?: string): Promise<SlaSettings[]> {
-    const settings = Array.from(this.slaSettings.values());
-    return departmentId ? settings.filter(s => s.departmentId === departmentId) : settings;
+    const db = await this.ensureConnection();
+    const filter = departmentId ? { departmentId, isActive: true } : { isActive: true };
+    const slaSettings = await db.collection('sla_settings').find(filter).toArray();
+    return slaSettings as SlaSettings[];
   }
 
-  async createSlaSettings(slaData: InsertSlaSettings): Promise<SlaSettings> {
-    const id = randomUUID();
-    const sla: SlaSettings = {
-      ...slaData,
-      id,
-      escalationLevels: slaData.escalationLevels || 3,
-      isActive: slaData.isActive ?? true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+  async createSlaSettings(sla: InsertSlaSettings): Promise<SlaSettings> {
+    const db = await this.ensureConnection();
+    const now = new Date();
+    const newSlaSettings: SlaSettings = {
+      id: randomUUID(),
+      ...sla,
+      escalationLevels: sla.escalationLevels || 3,
+      isActive: sla.isActive !== false,
+      createdAt: now,
+      updatedAt: now,
     };
-    this.slaSettings.set(id, sla);
-    return sla;
+    await db.collection('sla_settings').insertOne(newSlaSettings);
+    return newSlaSettings;
   }
 
   async updateSlaSettings(id: string, updates: Partial<SlaSettings>): Promise<SlaSettings | undefined> {
-    const sla = this.slaSettings.get(id);
-    if (!sla) return undefined;
-    
-    const updated = { ...sla, ...updates, updatedAt: new Date() };
-    this.slaSettings.set(id, updated);
-    return updated;
+    const db = await this.ensureConnection();
+    const updatedSlaSettings = { ...updates, updatedAt: new Date() };
+    const result = await db.collection('sla_settings').findOneAndUpdate(
+      { id },
+      { $set: updatedSlaSettings },
+      { returnDocument: 'after' }
+    );
+    return result as SlaSettings || undefined;
   }
 
   async deleteSlaSettings(id: string): Promise<boolean> {
-    return this.slaSettings.delete(id);
+    const db = await this.ensureConnection();
+    const result = await db.collection('sla_settings').updateOne(
+      { id },
+      { $set: { isActive: false, updatedAt: new Date() } }
+    );
+    return result.modifiedCount > 0;
   }
 
   // Notification methods
   async getNotifications(userId: string): Promise<Notification[]> {
-    return Array.from(this.notifications.values()).filter(n => n.userId === userId);
+    const db = await this.ensureConnection();
+    const notifications = await db.collection('notifications').find({ userId }).sort({ createdAt: -1 }).toArray();
+    return notifications as Notification[];
   }
 
   async getUnreadNotifications(userId: string): Promise<Notification[]> {
-    return Array.from(this.notifications.values()).filter(n => n.userId === userId && !n.isRead);
+    const db = await this.ensureConnection();
+    const notifications = await db.collection('notifications').find({ userId, isRead: false }).sort({ createdAt: -1 }).toArray();
+    return notifications as Notification[];
   }
 
-  async createNotification(notificationData: InsertNotification): Promise<Notification> {
-    const id = randomUUID();
-    const notification: Notification = {
-      ...notificationData,
-      id,
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const db = await this.ensureConnection();
+    const newNotification: Notification = {
+      id: randomUUID(),
+      ...notification,
       isRead: false,
-      actionUrl: notificationData.actionUrl || null,
-      metadata: notificationData.metadata || null,
-      expiresAt: notificationData.expiresAt || null,
       createdAt: new Date(),
     };
-    this.notifications.set(id, notification);
-    return notification;
+    await db.collection('notifications').insertOne(newNotification);
+    return newNotification;
   }
 
   async markNotificationRead(id: string): Promise<boolean> {
-    const notification = this.notifications.get(id);
-    if (!notification) return false;
-    
-    notification.isRead = true;
-    this.notifications.set(id, notification);
-    return true;
+    const db = await this.ensureConnection();
+    const result = await db.collection('notifications').updateOne(
+      { id },
+      { $set: { isRead: true } }
+    );
+    return result.modifiedCount > 0;
   }
 
   async deleteNotification(id: string): Promise<boolean> {
-    return this.notifications.delete(id);
+    const db = await this.ensureConnection();
+    const result = await db.collection('notifications').deleteOne({ id });
+    return result.deletedCount > 0;
   }
 
   // User management methods
   async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    const db = await this.ensureConnection();
+    const users = await db.collection('users').find({}).sort({ createdAt: -1 }).toArray();
+    return users as User[];
   }
 
   async getUsersByRole(role: string): Promise<User[]> {
-    return Array.from(this.users.values()).filter(u => u.role === role);
+    const db = await this.ensureConnection();
+    const users = await db.collection('users').find({ role }).sort({ createdAt: -1 }).toArray();
+    return users as User[];
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    
-    const updated = { ...user, ...updates };
-    this.users.set(id, updated);
-    return updated;
+    const db = await this.ensureConnection();
+    const result = await db.collection('users').findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { returnDocument: 'after' }
+    );
+    return result as User || undefined;
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    return this.users.delete(id);
+    const db = await this.ensureConnection();
+    const result = await db.collection('users').deleteOne({ id });
+    return result.deletedCount > 0;
   }
 
   // Audit log methods
   async getAuditLogs(userId?: string): Promise<AuditLog[]> {
-    const logs = Array.from(this.auditLogs.values());
-    return userId ? logs.filter(l => l.userId === userId) : logs;
+    const db = await this.ensureConnection();
+    const filter = userId ? { userId } : {};
+    const auditLogs = await db.collection('audit_logs').find(filter).sort({ createdAt: -1 }).toArray();
+    return auditLogs as AuditLog[];
   }
 
-  async createAuditLog(logData: InsertAuditLog): Promise<AuditLog> {
-    const id = randomUUID();
-    const log: AuditLog = {
-      ...logData,
-      id,
-      resourceId: logData.resourceId || null,
-      oldValues: logData.oldValues || null,
-      newValues: logData.newValues || null,
-      ipAddress: logData.ipAddress || null,
-      userAgent: logData.userAgent || null,
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const db = await this.ensureConnection();
+    const newAuditLog: AuditLog = {
+      id: randomUUID(),
+      ...log,
       createdAt: new Date(),
     };
-    this.auditLogs.set(id, log);
-    return log;
+    await db.collection('audit_logs').insertOne(newAuditLog);
+    return newAuditLog;
   }
 }
 
-export const storage = new MemStorage();
+// Export the MongoDB storage as default
+export const storage = new MongoStorage();
