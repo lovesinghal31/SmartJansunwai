@@ -275,46 +275,55 @@ export default function HomePage() {
       </section>
 
       {/* AI Features Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">AI-Powered Intelligence</h2>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Advanced machine learning algorithms working behind the scenes to improve efficiency and citizen experience.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {aiFeatures.map((feature, index) => (
-              <Card key={index} className={`bg-gradient-to-br ${feature.color}`}>
-                <CardContent className="p-6">
+    <section className="py-16 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">AI-Powered Intelligence</h2>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Advanced machine learning algorithms working behind the scenes to improve efficiency and citizen experience.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {aiFeatures.map((feature, index) => (
+            <Card key={index} className="bg-gradient-to-br from-white to-gray-100">
+              <CardContent className="p-6 flex flex-col h-full justify-between">
+                {/* Icon, Title, Description */}
+                <div>
                   <div className="w-12 h-12 bg-white bg-opacity-80 rounded-lg flex items-center justify-center mb-4">
                     <feature.icon size={20} className="text-gray-700" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{feature.title}</h3>
-                  <p className="text-gray-600 text-sm mb-4">{feature.description}</p>
-                  <Card className="bg-white">
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between mb-2 text-xs">
-                        <span className="text-gray-600">Accuracy Rate</span>
-                        <span className="font-semibold text-gray-800">{feature.accuracy}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5">
-                        <div 
-                          className="bg-primary-600 h-1.5 rounded-full" 
-                          style={{ width: feature.accuracy }}
-                        ></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      <Footer />
+                  <div className="mb-4 min-h-[100px]">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                    <p className="text-gray-600 text-sm">{feature.description}</p>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <Card className="bg-white mt-auto">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between mb-2 text-xs">
+                      <span className="text-gray-600">Accuracy Rate</span>
+                      <span className="font-semibold text-gray-800">{feature.accuracy}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div
+                        className="bg-blue-400 h-1.5 rounded-full transition-all duration-500"
+                        style={{ width: `${parseInt(feature.accuracy)}%` }}
+                      ></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <Footer />
+
     </div>
   );
 }
