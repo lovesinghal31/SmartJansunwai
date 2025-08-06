@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
@@ -16,6 +17,9 @@ import type { Complaint } from "@shared/schema";
 
 export default function CitizenDashboard() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [notifications, setNotifications] = useState([]);
+  const lastNotificationId = useRef<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showComplaintForm, setShowComplaintForm] = useState(false);
@@ -24,6 +28,35 @@ export default function CitizenDashboard() {
     queryKey: ["/api/complaints"],
     enabled: !!user,
   });
+
+  // Poll notifications every 4 seconds
+  useEffect(() => {
+    if (!user) return;
+    let interval: NodeJS.Timeout;
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch("/api/notifications");
+        if (!res.ok) return;
+        const data = await res.json();
+        setNotifications(data);
+        if (data.length > 0) {
+          const latest = data[0];
+          if (lastNotificationId.current !== latest.id) {
+            // Show toast for new notification
+            toast({
+              title: latest.title || "New Notification",
+              description: latest.message,
+              variant: latest.type === "error" ? "destructive" : "default",
+            });
+            lastNotificationId.current = latest.id;
+          }
+        }
+      } catch (e) {}
+    };
+    fetchNotifications();
+    interval = setInterval(fetchNotifications, 4000);
+    return () => clearInterval(interval);
+  }, [user, toast]);
 
   const filteredComplaints = complaints.filter(complaint => {
     const matchesSearch = complaint.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
