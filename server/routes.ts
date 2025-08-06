@@ -401,6 +401,23 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Delete notification
+  app.delete("/api/notifications/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const success = await storage.deleteNotification(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      res.sendStatus(204);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete notification" });
+    }
+  });
+
   // Audit logs (Admin only)
   app.get("/api/admin/audit-logs", async (req, res) => {
     if (!req.isAuthenticated() || req.user?.role !== "admin") {
