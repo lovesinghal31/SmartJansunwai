@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,8 @@ import {
 
 export default function FeaturesPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState("all");
 
   const featureCategories = [
@@ -59,6 +62,7 @@ export default function FeaturesPage() {
       icon: Bot,
       status: "available",
       route: "/chatbot",
+      navigationPath: "/chatbot",
       highlights: ["24/7 availability", "Multilingual support", "Voice input", "Smart suggestions"],
       accuracy: "94.2%",
       color: "from-blue-50 to-indigo-50 border-blue-200"
@@ -71,6 +75,7 @@ export default function FeaturesPage() {
       icon: Brain,
       status: "available",
       route: null,
+      navigationPath: null,
       highlights: ["NLP-powered", "Auto-routing", "Smart prioritization", "Learning system"],
       accuracy: "92.8%",
       color: "from-purple-50 to-violet-50 border-purple-200"
@@ -83,6 +88,7 @@ export default function FeaturesPage() {
       icon: Heart,
       status: "available",
       route: null,
+      navigationPath: null,
       highlights: ["Emotion detection", "Urgency scoring", "Voice analysis", "Text analysis"],
       accuracy: "89.5%",
       color: "from-pink-50 to-rose-50 border-pink-200"
@@ -95,6 +101,7 @@ export default function FeaturesPage() {
       icon: TrendingUp,
       status: "available",
       route: "/analytics",
+      navigationPath: "/analytics",
       highlights: ["Trend forecasting", "Early warning", "Resource planning", "Performance optimization"],
       accuracy: "87.3%",
       color: "from-green-50 to-emerald-50 border-green-200"
@@ -109,6 +116,7 @@ export default function FeaturesPage() {
       icon: Smartphone,
       status: "available",
       route: null,
+      navigationPath: null,
       highlights: ["Offline support", "Push notifications", "Install on device", "Cross-platform"],
       accuracy: null,
       color: "from-cyan-50 to-blue-50 border-cyan-200"
@@ -121,6 +129,7 @@ export default function FeaturesPage() {
       icon: Mic,
       status: "available",
       route: null,
+      navigationPath: null,
       highlights: ["Speech recognition", "Multilingual", "Hands-free", "Accessibility"],
       accuracy: null,
       color: "from-yellow-50 to-amber-50 border-yellow-200"
@@ -133,6 +142,7 @@ export default function FeaturesPage() {
       icon: QrCode,
       status: "available",
       route: null,
+      navigationPath: null,
       highlights: ["Location tagging", "Asset identification", "Quick reporting", "Utility mapping"],
       accuracy: null,
       color: "from-indigo-50 to-blue-50 border-indigo-200"
@@ -145,6 +155,7 @@ export default function FeaturesPage() {
       icon: Map,
       status: "available",
       route: "/complaint-map",
+      navigationPath: "/complaint-map",
       highlights: ["Real-time mapping", "Heatmap analysis", "Location search", "Ward filtering"],
       accuracy: null,
       color: "from-green-50 to-teal-50 border-green-200"
@@ -159,6 +170,7 @@ export default function FeaturesPage() {
       icon: BarChart3,
       status: "available",
       route: "/analytics",
+      navigationPath: "/analytics",
       highlights: ["Performance metrics", "Trend analysis", "AI insights", "Export reports"],
       accuracy: null,
       color: "from-orange-50 to-red-50 border-orange-200"
@@ -171,6 +183,7 @@ export default function FeaturesPage() {
       icon: Layers,
       status: "available",
       route: "/official-dashboard",
+      navigationPath: "/official-dashboard",
       highlights: ["Visual workflow", "Drag & drop", "Status tracking", "Team collaboration"],
       accuracy: null,
       color: "from-slate-50 to-gray-50 border-slate-200"
@@ -183,6 +196,7 @@ export default function FeaturesPage() {
       icon: Clock,
       status: "available",
       route: null,
+      navigationPath: null,
       highlights: ["Auto escalation", "Priority scoring", "Timeline tracking", "Performance monitoring"],
       accuracy: null,
       color: "from-violet-50 to-purple-50 border-violet-200"
@@ -195,6 +209,7 @@ export default function FeaturesPage() {
       icon: FileText,
       status: "available",
       route: null,
+      navigationPath: null,
       highlights: ["Action logging", "User tracking", "Timestamp records", "Compliance ready"],
       accuracy: null,
       color: "from-gray-50 to-slate-50 border-gray-200"
@@ -209,6 +224,7 @@ export default function FeaturesPage() {
       icon: Zap,
       status: "available",
       route: null,
+      navigationPath: null,
       highlights: ["Service worker", "Local storage", "Sync on connect", "Background updates"],
       accuracy: null,
       color: "from-emerald-50 to-green-50 border-emerald-200"
@@ -221,6 +237,7 @@ export default function FeaturesPage() {
       icon: Bell,
       status: "available",
       route: null,
+      navigationPath: null,
       highlights: ["Push notifications", "WebSocket updates", "Status alerts", "Custom preferences"],
       accuracy: null,
       color: "from-red-50 to-pink-50 border-red-200"
@@ -233,6 +250,7 @@ export default function FeaturesPage() {
       icon: Camera,
       status: "available",
       route: null,
+      navigationPath: null,
       highlights: ["Direct capture", "Image compression", "Multiple photos", "Gallery access"],
       accuracy: null,
       color: "from-blue-50 to-cyan-50 border-blue-200"
@@ -245,26 +263,57 @@ export default function FeaturesPage() {
       icon: Navigation,
       status: "available",
       route: null,
+      navigationPath: null,
       highlights: ["Auto-location", "GPS precision", "Address lookup", "Area boundaries"],
       accuracy: null,
       color: "from-teal-50 to-cyan-50 border-teal-200"
     }
   ];
 
+  // Debug user state and routes
+  console.log("FeaturesPage - Current user:", user);
+  console.log("FeaturesPage - User role:", user?.role);
+  console.log("FeaturesPage - Navigate function available:", typeof navigate);
+  
+  // Debug available routes
+  const availableRoutes = allFeatures.filter(f => f.navigationPath).map(f => ({ title: f.title, navigationPath: f.navigationPath }));
+  console.log("FeaturesPage - Available navigation paths:", availableRoutes);
+
   const filteredFeatures = selectedCategory === "all" 
     ? allFeatures 
     : allFeatures.filter(feature => feature.category === selectedCategory);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "available":
-        return <Badge className="bg-green-100 text-green-800">Available</Badge>;
-      case "beta":
-        return <Badge className="bg-yellow-100 text-yellow-800">Beta</Badge>;
-      case "coming-soon":
-        return <Badge className="bg-blue-100 text-blue-800">Coming Soon</Badge>;
-      default:
-        return <Badge className="bg-gray-100 text-gray-800">Unknown</Badge>;
+  const handleFeatureClick = (feature: any) => {
+    console.log("Feature clicked:", feature.title, "NavigationPath:", feature.navigationPath);
+    console.log("Navigate function:", typeof navigate);
+    
+    if (feature.navigationPath) {
+      // Route to the specific feature using react-router navigation
+      console.log("Attempting to navigate to:", feature.navigationPath);
+      try {
+        navigate(feature.navigationPath);
+        console.log("Navigation successful");
+      } catch (error) {
+        console.error("Navigation error:", error);
+        // Fallback to window.location if navigate fails
+        window.location.href = feature.navigationPath;
+      }
+    } else {
+      // Show "coming soon" popup
+      console.log("Showing coming soon message for:", feature.title);
+      toast({
+        title: "Feature Coming Soon",
+        description: `${feature.title} is currently being developed and will be available soon!`,
+        variant: "default"
+      });
+    }
+  };
+
+  const getStatusBadge = (status: string, hasNavigationPath: boolean) => {
+    if (hasNavigationPath) {
+      return <Badge className="bg-green-100 text-green-800">Available</Badge>;
+    } else {
+      return <Badge className="bg-blue-100 text-blue-800">Coming Soon</Badge>;
     }
   };
 
@@ -285,6 +334,49 @@ export default function FeaturesPage() {
             Discover the comprehensive suite of AI-powered tools and advanced features that make 
             Jansunwai the most sophisticated grievance redressal platform.
           </p>
+          {/* Debug Navigation Test */}
+          <div className="mt-4 flex justify-center space-x-4">
+            <Button 
+              onClick={() => {
+                console.log("Testing navigation to /chatbot");
+                navigate("/chatbot");
+              }}
+              variant="outline"
+              size="sm"
+            >
+              Test Chatbot Nav
+            </Button>
+            <Button 
+              onClick={() => {
+                console.log("Testing navigation to /features");
+                navigate("/features");
+              }}
+              variant="outline"
+              size="sm"
+            >
+              Test Features Nav
+            </Button>
+            <Button 
+              onClick={() => {
+                console.log("Testing window.location.href to /chatbot");
+                window.location.href = "/chatbot";
+              }}
+              variant="outline"
+              size="sm"
+            >
+              Test Window Location
+            </Button>
+            <Button 
+              onClick={() => {
+                console.log("Testing navigation to /auth (non-protected)");
+                navigate("/auth");
+              }}
+              variant="outline"
+              size="sm"
+            >
+              Test Auth Nav
+            </Button>
+          </div>
         </div>
 
         {/* Feature Statistics */}
@@ -334,7 +426,14 @@ export default function FeaturesPage() {
             <TabsContent key={category.id} value={category.id}>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredFeatures.map((feature) => (
-                  <Card key={feature.id} className={`hover:shadow-lg transition-all duration-300 bg-gradient-to-br ${feature.color}`}>
+                  <Card 
+                    key={feature.id} 
+                    className={`hover:shadow-lg transition-all duration-300 bg-gradient-to-br ${feature.color} cursor-pointer`}
+                    onClick={() => {
+                      console.log("Card clicked for feature:", feature.title);
+                      handleFeatureClick(feature);
+                    }}
+                  >
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex items-start space-x-3">
@@ -343,7 +442,7 @@ export default function FeaturesPage() {
                           </div>
                           <div>
                             <CardTitle className="text-lg text-gray-900">{feature.title}</CardTitle>
-                            {getStatusBadge(feature.status)}
+                            {getStatusBadge(feature.status, !!feature.navigationPath)}
                           </div>
                         </div>
                       </div>
@@ -380,17 +479,32 @@ export default function FeaturesPage() {
                       </div>
 
                       {/* Action Button */}
-                      {feature.route ? (
-                        <Link href={feature.route}>
-                          <Button className="w-full">
-                            Try Feature
-                            <ArrowRight size={16} className="ml-2" />
-                          </Button>
-                        </Link>
+                      {feature.category === "official" && (!user || user.role !== "official") ? (
+                        <Button className="w-full" variant="outline" disabled title="Officials only">
+                          <Shield size={16} className="mr-2" />
+                          Officials Only
+                        </Button>
                       ) : (
-                        <Button variant="outline" className="w-full" disabled>
-                          <Lightbulb size={16} className="mr-2" />
-                          Integrated Feature
+                        <Button 
+                          className="w-full" 
+                          onClick={(e) => {
+                            console.log("Button clicked for feature:", feature.title);
+                            e.stopPropagation();
+                            handleFeatureClick(feature);
+                          }}
+                          variant={feature.navigationPath ? "default" : "outline"}
+                        >
+                          {feature.navigationPath ? (
+                            <>
+                              Try Feature
+                              <ArrowRight size={16} className="ml-2" />
+                            </>
+                          ) : (
+                            <>
+                              <Lightbulb size={16} className="mr-2" />
+                              Coming Soon
+                            </>
+                          )}
                         </Button>
                       )}
                     </CardContent>
@@ -420,7 +534,11 @@ export default function FeaturesPage() {
                 </thead>
                 <tbody>
                   {allFeatures.slice(0, 8).map((feature) => (
-                    <tr key={feature.id} className="border-b hover:bg-gray-50">
+                    <tr 
+                      key={feature.id} 
+                      className="border-b hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleFeatureClick(feature)}
+                    >
                       <td className="p-3">
                         <div className="flex items-center space-x-3">
                           <feature.icon size={16} className="text-gray-600" />
@@ -437,7 +555,7 @@ export default function FeaturesPage() {
                         <CheckCircle className="text-green-500 mx-auto" size={16} />
                       </td>
                       <td className="p-3 text-right">
-                        {getStatusBadge(feature.status)}
+                        {getStatusBadge(feature.status, !!feature.navigationPath)}
                       </td>
                     </tr>
                   ))}
@@ -465,7 +583,7 @@ export default function FeaturesPage() {
                 <p className="text-sm text-gray-600 mb-4">
                   Start by exploring the chatbot assistant and interactive map for an enhanced complaint experience.
                 </p>
-                <Link href="/chatbot">
+                <Link to="/chatbot">
                   <Button className="w-full">
                     Start with Chatbot
                   </Button>
@@ -480,7 +598,7 @@ export default function FeaturesPage() {
                 <p className="text-sm text-gray-600 mb-4">
                   Access the analytics dashboard and Kanban board for comprehensive complaint management.
                 </p>
-                <Link href="/analytics">
+                <Link to="/analytics">
                   <Button className="w-full">
                     View Analytics
                   </Button>
