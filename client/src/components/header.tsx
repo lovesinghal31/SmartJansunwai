@@ -29,7 +29,7 @@ import { Notification } from "../../../shared/schema";
 import Logo from "./logo.png"; // Adjust the path as necessary
 
 export default function Header() {
-  const { user, logoutMutation } = useAuth();
+  const { user, logoutMutation, accessToken } = useAuth();
   const [location] = useLocation();
   const { t } = useTranslation();
 
@@ -46,13 +46,13 @@ export default function Header() {
 
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("PUT", `/api/notifications/${id}/read`);
+      await apiRequest("PUT", `/api/notifications/${id}/read`, undefined, accessToken);
     },
   });
 
   const deleteNotificationMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/notifications/${id}`);
+      await apiRequest("DELETE", `/api/notifications/${id}`, undefined, accessToken);
     },
   });
 

@@ -38,7 +38,7 @@ export const queryClient = new QueryClient({
       // You should use useAuth and pass accessToken manually for protected queries
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      staleTime: 5 * 60 * 1000, // 5 minutes instead of Infinity
       retry: false,
     },
     mutations: {
