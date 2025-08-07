@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Header() {
   const { user, logoutMutation, accessToken } = useAuth();
-  const location = useLocation();
+  const [location] = useLocation(); // Wouter's useLocation returns an array
   const { t } = useTranslation();
   const { toast } = useToast();
 
@@ -41,46 +41,36 @@ export default function Header() {
     isError: notificationsError,
     refetch: refetchNotifications,
   } = useQuery<Notification[]>({
-    queryKey: ["/api/notifications"],
+    queryKey: ["/api/notifications", user?.id],
     queryFn: async () => {
-      console.log("Header: Fetching notifications for user:", user?.username);
-      console.log("Header: Access token present:", !!accessToken);
       const res = await apiRequest("GET", "/api/notifications", undefined, accessToken);
-      const data = await res.json();
-      console.log("Header: Notifications data:", data);
-      return data;
+      if (!res.ok) {
+        throw new Error("Failed to fetch notifications");
+      }
+      return res.json();
     },
-    enabled: !!user && !!accessToken,
-    refetchInterval: 4000,
+    enabled: !!user?.id && !!accessToken,
+    refetchInterval: 10000,
   });
 
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("PUT", `/api/notifications/${id}/read`, undefined, accessToken);
     },
+    onSuccess: () => refetchNotifications(),
   });
 
   const deleteNotificationMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/notifications/${id}`, undefined, accessToken);
     },
+    onSuccess: () => refetchNotifications(),
   });
 
   const unreadCount =
     notifications?.filter((n: Notification) => !n.isRead).length || 0;
-
-  // Debug information
-  console.log("Header Debug:", {
-    user: user?.username,
-    userRole: user?.role,
-    accessToken: !!accessToken,
-    notificationsCount: notifications.length,
-    unreadCount,
-    notificationsLoading,
-    notificationsError
-  });
-
-  // Manual test function
+    
+  // --- FIX: Restored the testNotifications function ---
   const testNotifications = async () => {
     console.log("Testing notifications API manually...");
     try {
@@ -100,52 +90,21 @@ export default function Header() {
 
   const handleNotificationClick = async (n: Notification) => {
     if (!n.isRead) {
-      markAsReadMutation.mutate(n.id, {
-        onSuccess: () => {
-          refetchNotifications();
-        },
-      });
+      markAsReadMutation.mutate(n.id);
     }
     if (n.actionUrl) {
       window.location.href = n.actionUrl;
     }
   };
-
+  
   const navigation = [
     { name: t("navigation.home"), href: "/", icon: Home },
     { name: t("navigation.features"), href: "/features", icon: Rocket },
-    {
-      name: t("navigation.chatbot"),
-      href: "/chatbot",
-      icon: MessageSquare,
-      protected: true,
-    },
-    {
-      name: t("navigation.map"),
-      href: "/complaint-map",
-      icon: Map,
-      protected: true,
-    },
-    {
-      name: t("navigation.feedback"),
-      href: "/feedback",
-      icon: MessageSquare,
-      protected: true,
-    },
-    {
-      name: t("navigation.analytics"),
-      href: "/analytics",
-      icon: BarChart3,
-      protected: true,
-      officialOnly: true,
-    },
-    {
-      name: t("navigation.admin"),
-      href: "/admin-dashboard",
-      icon: Shield,
-      protected: true,
-      adminOnly: true,
-    },
+    { name: t("navigation.chatbot"), href: "/chatbot", icon: MessageSquare, protected: true },
+    { name: t("navigation.map"), href: "/complaint-map", icon: Map, protected: true },
+    { name: t("navigation.feedback"), href: "/feedback", icon: MessageSquare, protected: true },
+    { name: t("navigation.analytics"), href: "/analytics", icon: BarChart3, protected: true, officialOnly: true },
+    { name: t("navigation.admin"), href: "/admin-dashboard", icon: Shield, protected: true, adminOnly: true },
   ];
 
   const handleLogout = () => {
@@ -154,33 +113,23 @@ export default function Header() {
 
   return (
     <header className="bg-white shadow-sm border-b">
-      <div className="w-full px-0">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex-grow-0">
-            <div className="flex items-center justify-start flex-shrink-0">
-              <Link to="/">
-                <div className="flex items-center space-x-3">
-                  <img
-                    src={Logo}
-                    alt="Samadhan+"
-                    className="h-12 w-12 object-contain rounded"
-                  />
-                  <span className="text-2xl font-bold text-gray-900 leading-none">
-                    SAMADHAN+
-                  </span>
-                </div>
-              </Link>
-            </div>
+          <div className="flex items-center">
+            <Link to="/">
+              <div className="flex items-center space-x-3">
+                <img src={Logo} alt="Samadhan+" className="h-12 w-12 object-contain" />
+                <span className="text-xl font-bold text-gray-900">SAMADHAN+</span>
+              </div>
+            </Link>
           </div>
-</div>
 
           {/* Navigation */}
-          <nav className="hidden md:flex space-x-8">
+          <nav className="hidden md:flex items-center space-x-1">
             {navigation.map((item) => {
               const shouldShow = !item.protected || user;
-              const isOfficialOnly =
-                item.officialOnly && user?.role !== "official";
+              const isOfficialOnly = item.officialOnly && user?.role !== "official";
               const isAdminOnly = item.adminOnly && user?.role !== "admin";
 
               if (!shouldShow || isOfficialOnly || isAdminOnly) return null;
@@ -188,13 +137,13 @@ export default function Header() {
               return (
                 <Link key={item.name} to={item.href}>
                   <div
-                    className={`flex items-center space-x-2 px-4 py-3 rounded-md text-base font-medium transition-colors ${
-                      location[0] === item.href
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      location === item.href
                         ? "text-primary-600 bg-primary-50"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
                   >
-                    <item.icon size={20} />
+                    <item.icon size={18} />
                     <span>{item.name}</span>
                   </div>
                 </Link>
@@ -202,18 +151,14 @@ export default function Header() {
             })}
           </nav>
 
-          {/* User Menu */}
-          <div className="flex items-center space-x-2 mr-2">
+          {/* User Menu & Actions */}
+          <div className="flex items-center space-x-4">
+            <LanguageSwitcher />
             {user ? (
               <>
-                {/* Notification Button */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="relative p-2"
-                      onClick={() => refetchNotifications()}
-                    >
+                    <Button variant="ghost" className="relative p-2 rounded-full">
                       <Bell size={20} />
                       {unreadCount > 0 && (
                         <span className="absolute top-1 right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
@@ -222,10 +167,8 @@ export default function Header() {
                       )}
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-80 max-h-96 overflow-y-auto"
-                  >
+                  <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto rounded-xl">
+                    {/* --- FIX: Restored the Test Notifications button --- */}
                     <div className="px-4 py-2 border-b">
                       <Button 
                         variant="outline" 
@@ -237,94 +180,53 @@ export default function Header() {
                       </Button>
                     </div>
                     {notificationsLoading ? (
-                      <div className="px-4 py-2 text-sm text-gray-500">
-                        Loading...
-                      </div>
+                      <div className="p-4 text-center text-sm text-gray-500">Loading...</div>
                     ) : notificationsError ? (
-                      <div className="px-4 py-2 text-sm text-red-500">
-                        Failed to load notifications.
-                      </div>
-                    ) : notifications && notifications.length > 0 ? (
+                      <div className="p-4 text-center text-sm text-red-500">Failed to load.</div>
+                    ) : notifications.length > 0 ? (
                       notifications.map((n: Notification) => (
-                        <div
-                          key={n.id}
-                          className={`px-4 py-2 border-b last:border-b-0 transition-colors ${
-                            n.isRead
-                              ? "bg-white"
-                              : "bg-blue-50 hover:bg-blue-100"
-                          }`}
-                        >
-                          <div className="flex justify-between items-center">
-                            <div
-                              className="font-semibold flex items-center cursor-pointer"
-                              onClick={() => handleNotificationClick(n)}
-                            >
-                              {n.title}
-                              {!n.isRead && (
-                                <span className="ml-2 w-2 h-2 bg-blue-500 rounded-full inline-block" />
-                              )}
+                        <div key={n.id} className={`p-3 border-b last:border-b-0 ${!n.isRead ? 'bg-blue-50' : ''}`}>
+                          <div className="flex justify-between items-start">
+                            <div className="flex-grow cursor-pointer" onClick={() => handleNotificationClick(n)}>
+                              <p className="font-semibold text-sm">{n.title}</p>
+                              <p className="text-xs text-gray-600">{n.message}</p>
+                              <p className="text-xs text-gray-400 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
                             </div>
-                            <button
-                              className="ml-2 p-1 text-red-500 hover:bg-red-100 rounded"
-                              type="button"
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-red-500 hover:bg-red-100"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                deleteNotificationMutation.mutate(n.id, {
-                                  onSuccess: () => refetchNotifications(),
-                                });
+                                deleteNotificationMutation.mutate(n.id);
                               }}
-                              title="Delete notification"
-                              aria-label="Delete notification"
                             >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                          <div className="text-sm text-gray-700">
-                            {n.message}
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            {new Date(n.createdAt).toLocaleString()}
+                              <Trash2 size={14} />
+                            </Button>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="px-4 py-2 text-sm text-gray-500">
-                        No notifications.
-                      </div>
+                      <div className="p-4 text-center text-sm text-gray-500">No notifications.</div>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                {/* User Menu */}
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="flex items-center space-x-3 text-lg px-4 py-2"
-                    >
-                      <User size={24} />
-                      <span className="hidden sm:inline font-semibold">
-                        {user.username}
-                      </span>
+                    <Button variant="ghost" className="flex items-center space-x-2 p-2 rounded-full">
+                      <User size={20} />
+                      <span className="hidden sm:inline font-semibold">{user.username}</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent align="end" className="w-56 rounded-xl">
                     <div className="px-2 py-1.5">
                       <p className="text-sm font-medium">{user.username}</p>
-                      <p className="text-xs text-gray-500 capitalize">
-                        {user.role}
-                      </p>
+                      <p className="text-xs text-gray-500 capitalize">{user.role}</p>
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link
-                        to={
-                          user.role === "admin"
-                            ? "/admin-dashboard"
-                            : user.role === "official"
-                            ? "/official-dashboard"
-                            : "/citizen-dashboard"
-                        }
-                      >
+                      <Link to={user.role === "admin" ? "/admin-dashboard" : user.role === "official" ? "/official-dashboard" : "/citizen-dashboard"}>
                         <Home size={16} className="mr-2" />
                         Dashboard
                       </Link>
@@ -345,12 +247,6 @@ export default function Header() {
               <div className="flex items-center space-x-2">
                 <Link to="/auth">
                   <Button variant="outline">Sign In</Button>
-                </Link>
-                <Link to="/features">
-                  <Button>
-                    <Rocket size={16} className="mr-2" />
-                    Features
-                  </Button>
                 </Link>
               </div>
             )}
