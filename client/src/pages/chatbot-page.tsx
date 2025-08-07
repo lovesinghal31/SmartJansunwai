@@ -7,13 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Bot, 
-  Send, 
-  Mic, 
-  User, 
-  MessageCircle, 
-  Clock, 
+import {
+  Bot,
+  Send,
+  Mic,
+  User,
+  MessageCircle,
+  Clock,
   CheckCircle,
   AlertCircle,
   HelpCircle,
@@ -182,7 +182,7 @@ export default function ChatbotPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="text-center mb-8">
@@ -197,10 +197,11 @@ export default function ChatbotPage() {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Chat Interface */}
-          <div className="lg:col-span-3">
-            <Card className="h-[600px] flex flex-col">
+        {/* This is the key change: use flexbox for column layout on large screens */}
+        <div className="grid lg:grid-cols-4 gap-8 items-stretch">
+          {/* Chat Interface - Stretches to match height */}
+          <div className="lg:col-span-3 flex">
+            <Card className="flex-1 flex flex-col">
               <CardHeader className="border-b">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center space-x-2">
@@ -216,7 +217,7 @@ export default function ChatbotPage() {
                   </div>
                 </div>
               </CardHeader>
-              
+
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {messages.map((message) => (
@@ -232,8 +233,8 @@ export default function ChatbotPage() {
                         )}
                       </div>
                       <div className={`rounded-lg p-3 ${
-                        message.type === 'user' 
-                          ? 'bg-primary-600 text-white' 
+                        message.type === 'user'
+                          ? 'bg-primary-600 text-white'
                           : 'bg-gray-100 text-gray-900'
                       }`}>
                         <p className="text-sm whitespace-pre-wrap">{message.message}</p>
@@ -257,7 +258,7 @@ export default function ChatbotPage() {
                     </div>
                   </div>
                 ))}
-                
+
                 {isTyping && (
                   <div className="flex justify-start">
                     <div className="flex space-x-3">
@@ -275,7 +276,7 @@ export default function ChatbotPage() {
                   </div>
                 )}
               </div>
-              
+
               {/* Input */}
               <div className="border-t p-4">
                 <div className="flex space-x-2">
@@ -304,10 +305,10 @@ export default function ChatbotPage() {
             </Card>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Quick Questions */}
-            <Card>
+          {/* Sidebar content - Stretches to match height */}
+          <div className="lg:col-span-1 flex flex-col space-y-6">
+            {/* Quick Questions - The height of this card now determines the total height */}
+            <Card className="flex-1">
               <CardHeader>
                 <CardTitle className="text-lg">Common Questions</CardTitle>
               </CardHeader>
@@ -327,53 +328,6 @@ export default function ChatbotPage() {
                     </div>
                   </button>
                 ))}
-              </CardContent>
-            </Card>
-
-            {/* Knowledge Base */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Knowledge Base</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {knowledgeBase.map((item, index) => (
-                  <div key={index} className="p-3 rounded-lg border">
-                    <div className="flex items-start space-x-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.color}`}>
-                        <item.icon size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                        <p className="text-xs text-gray-500 mt-1">{item.description}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Features */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">AI Features</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center space-x-3 p-2">
-                  <Lightbulb className="text-yellow-500" size={16} />
-                  <span className="text-sm">Smart Suggestions</span>
-                </div>
-                <div className="flex items-center space-x-3 p-2">
-                  <MessageCircle className="text-blue-500" size={16} />
-                  <span className="text-sm">Natural Language</span>
-                </div>
-                <div className="flex items-center space-x-3 p-2">
-                  <Mic className="text-green-500" size={16} />
-                  <span className="text-sm">Voice Input</span>
-                </div>
-                <div className="flex items-center space-x-3 p-2">
-                  <Globe className="text-purple-500" size={16} />
-                  <span className="text-sm">Multilingual</span>
-                </div>
               </CardContent>
             </Card>
           </div>

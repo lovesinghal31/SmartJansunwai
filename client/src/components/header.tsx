@@ -183,7 +183,7 @@ export default function Header() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-80 max-h-96 overflow-y-auto"
+                    className="w-56 border border-black rounded-md shadow-lg"
                   >
                     {notificationsLoading ? (
                       <div className="px-4 py-2 text-sm text-gray-500">
