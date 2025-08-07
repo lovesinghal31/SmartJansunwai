@@ -349,10 +349,15 @@ export function registerRoutes(app: Express): Server {
 
   // Notification routes
   app.get("/api/notifications", authenticateJWT, async (req, res) => {
+    console.log("Notifications route called - User:", req.user);
+    console.log("Notifications route - User ID:", req.user?.id);
+    
     try {
       const notifications = await storage.getNotifications(req.user!.id);
+      console.log("Notifications route - Found notifications:", notifications.length);
       res.json(notifications);
     } catch (error) {
+      console.error("Notifications route error:", error);
       res.status(500).json({ error: "Failed to get notifications" });
     }
   });

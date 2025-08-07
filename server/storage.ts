@@ -402,7 +402,9 @@ export class MongoStorage implements IStorage {
   // Notification methods
   async getNotifications(userId: string): Promise<Notification[]> {
     const db = await this.ensureConnection();
+    console.log("Storage: Getting notifications for user ID:", userId);
     const notifications = await db.collection('notifications').find({ userId }).sort({ createdAt: -1 }).toArray();
+    console.log("Storage: Found notifications:", notifications.length);
     return notifications as Notification[];
   }
 
