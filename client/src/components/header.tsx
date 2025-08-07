@@ -27,11 +27,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Notification } from "../../../shared/schema";
 import Logo from "./logo.png"; // Adjust the path as necessary
+import { useToast } from "@/hooks/use-toast";
 
 export default function Header() {
   const { user, logoutMutation, accessToken } = useAuth();
   const [location] = useLocation();
   const { t } = useTranslation();
+  const { toast } = useToast();
 
   const {
     data: notifications = [],
@@ -40,7 +42,15 @@ export default function Header() {
     refetch: refetchNotifications,
   } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
-    enabled: !!user,
+    queryFn: async () => {
+      console.log("Header: Fetching notifications for user:", user?.username);
+      console.log("Header: Access token present:", !!accessToken);
+      const res = await apiRequest("GET", "/api/notifications", undefined, accessToken);
+      const data = await res.json();
+      console.log("Header: Notifications data:", data);
+      return data;
+    },
+    enabled: !!user && !!accessToken,
     refetchInterval: 4000,
   });
 
@@ -58,6 +68,35 @@ export default function Header() {
 
   const unreadCount =
     notifications?.filter((n: Notification) => !n.isRead).length || 0;
+
+  // Debug information
+  console.log("Header Debug:", {
+    user: user?.username,
+    userRole: user?.role,
+    accessToken: !!accessToken,
+    notificationsCount: notifications.length,
+    unreadCount,
+    notificationsLoading,
+    notificationsError
+  });
+
+  // Manual test function
+  const testNotifications = async () => {
+    console.log("Testing notifications API manually...");
+    try {
+      const res = await apiRequest("GET", "/api/notifications", undefined, accessToken);
+      const data = await res.json();
+      console.log("Manual notifications test result:", data);
+      toast({ title: "Notifications test successful", description: `Found ${data.length} notifications` });
+    } catch (error) {
+      console.error("Manual notifications test error:", error);
+      toast({ 
+        title: "Notifications test failed", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    }
+  };
 
   const handleNotificationClick = async (n: Notification) => {
     if (!n.isRead) {
@@ -186,6 +225,16 @@ export default function Header() {
                     align="end"
                     className="w-80 max-h-96 overflow-y-auto"
                   >
+                    <div className="px-4 py-2 border-b">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={testNotifications}
+                        className="w-full"
+                      >
+                        Test Notifications
+                      </Button>
+                    </div>
                     {notificationsLoading ? (
                       <div className="px-4 py-2 text-sm text-gray-500">
                         Loading...
