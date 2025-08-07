@@ -196,7 +196,9 @@ export class MongoStorage implements IStorage {
 
   async getAllComplaints(): Promise<Complaint[]> {
     const db = await this.ensureConnection();
+    console.log("Storage: Getting all complaints from database...");
     const complaints = await db.collection('complaints').find({}).sort({ createdAt: -1 }).toArray();
+    console.log("Storage: Found", complaints.length, "complaints");
     return complaints as Complaint[];
   }
 
@@ -260,12 +262,17 @@ export class MongoStorage implements IStorage {
 
   async createFeedback(feedback: InsertFeedback & { citizenId: string }): Promise<Feedback> {
     const db = await this.ensureConnection();
+    console.log("Storage: Creating feedback with data:", feedback);
+    
     const newFeedback: Feedback = {
       id: randomUUID(),
       ...feedback,
       createdAt: new Date(),
     };
+    
+    console.log("Storage: New feedback object:", newFeedback);
     await db.collection('feedback').insertOne(newFeedback);
+    console.log("Storage: Feedback created successfully");
     return newFeedback;
   }
 
@@ -277,7 +284,9 @@ export class MongoStorage implements IStorage {
     byPriority: Record<string, number>;
   }> {
     const db = await this.ensureConnection();
+    console.log("Storage: Getting complaint stats from database...");
     const complaints = await db.collection('complaints').find({}).toArray();
+    console.log("Storage: Found", complaints.length, "complaints for stats");
     
     const stats = {
       total: complaints.length,
@@ -295,6 +304,7 @@ export class MongoStorage implements IStorage {
       stats.byPriority[complaint.priority] = (stats.byPriority[complaint.priority] || 0) + 1;
     });
 
+    console.log("Storage: Calculated stats:", stats);
     return stats;
   }
 
@@ -392,7 +402,9 @@ export class MongoStorage implements IStorage {
   // Notification methods
   async getNotifications(userId: string): Promise<Notification[]> {
     const db = await this.ensureConnection();
+    console.log("Storage: Getting notifications for user ID:", userId);
     const notifications = await db.collection('notifications').find({ userId }).sort({ createdAt: -1 }).toArray();
+    console.log("Storage: Found notifications:", notifications.length);
     return notifications as Notification[];
   }
 

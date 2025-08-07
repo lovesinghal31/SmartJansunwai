@@ -34,6 +34,8 @@ import {
   BarChart3,
   Eye
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 
 // Form schemas
 const departmentFormSchema = z.object({
@@ -79,38 +81,59 @@ export default function AdminDashboard() {
   const [selectedDepartment, setSelectedDepartment] = useState<any>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const { toast } = useToast();
+  const { accessToken } = useAuth();
 
   // Queries
   const { data: departments = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/departments"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/departments", undefined, accessToken);
+      return res.json();
+    },
+    enabled: !!accessToken,
   });
 
   const { data: users = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/users"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/users", undefined, accessToken);
+      return res.json();
+    },
+    enabled: !!accessToken,
   });
 
   const { data: slaSettings = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/sla-settings"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/sla-settings", undefined, accessToken);
+      return res.json();
+    },
+    enabled: !!accessToken,
   });
 
   const { data: auditLogs = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/audit-logs"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/audit-logs", undefined, accessToken);
+      return res.json();
+    },
+    enabled: !!accessToken,
   });
 
   const { data: stats = {} } = useQuery<any>({
     queryKey: ["/api/analytics/stats"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/analytics/stats", undefined, accessToken);
+      return res.json();
+    },
+    enabled: !!accessToken,
   });
 
   // Department mutations
   const createDepartmentMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch("/api/admin/departments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to create department");
-      return response.json();
+      const res = await apiRequest("POST", "/api/admin/departments", data, accessToken);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/departments"] });
@@ -121,13 +144,8 @@ export default function AdminDashboard() {
 
   const updateDepartmentMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      const response = await fetch(`/api/admin/departments/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to update department");
-      return response.json();
+      const res = await apiRequest("PUT", `/api/admin/departments/${id}`, data, accessToken);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/departments"] });
@@ -138,10 +156,7 @@ export default function AdminDashboard() {
 
   const deleteDepartmentMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/admin/departments/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete department");
+      await apiRequest("DELETE", `/api/admin/departments/${id}`, undefined, accessToken);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/departments"] });
@@ -152,13 +167,8 @@ export default function AdminDashboard() {
   // SLA mutations
   const createSlaMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch("/api/admin/sla-settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to create SLA settings");
-      return response.json();
+      const res = await apiRequest("POST", "/api/admin/sla-settings", data, accessToken);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/sla-settings"] });
@@ -170,13 +180,8 @@ export default function AdminDashboard() {
   // User mutations
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      const response = await fetch(`/api/admin/users/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to update user");
-      return response.json();
+      const res = await apiRequest("PUT", `/api/admin/users/${id}`, data, accessToken);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -191,13 +196,8 @@ export default function AdminDashboard() {
       // Ensure expiresAt is sent as a date or omitted
       const payload = { ...data };
       if (!payload.expiresAt) delete payload.expiresAt;
-      const response = await fetch("/api/admin/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) throw new Error("Failed to create notification");
-      return response.json();
+      const res = await apiRequest("POST", "/api/admin/notifications", payload, accessToken);
+      return res.json();
     },
     onSuccess: () => {
       setNotificationDialog(false);

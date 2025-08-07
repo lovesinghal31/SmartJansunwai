@@ -27,11 +27,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Notification } from "../../../shared/schema";
 import Logo from "./logo.png"; // Adjust the path as necessary
+import { useToast } from "@/hooks/use-toast";
 
 export default function Header() {
-  const { user, logoutMutation } = useAuth();
-  const [location] = useLocation();
+  const { user, logoutMutation, accessToken } = useAuth();
+  const location = useLocation();
   const { t } = useTranslation();
+  const { toast } = useToast();
 
   const {
     data: notifications = [],
@@ -40,24 +42,61 @@ export default function Header() {
     refetch: refetchNotifications,
   } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
-    enabled: !!user,
+    queryFn: async () => {
+      console.log("Header: Fetching notifications for user:", user?.username);
+      console.log("Header: Access token present:", !!accessToken);
+      const res = await apiRequest("GET", "/api/notifications", undefined, accessToken);
+      const data = await res.json();
+      console.log("Header: Notifications data:", data);
+      return data;
+    },
+    enabled: !!user && !!accessToken,
     refetchInterval: 4000,
   });
 
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("PUT", `/api/notifications/${id}/read`);
+      await apiRequest("PUT", `/api/notifications/${id}/read`, undefined, accessToken);
     },
   });
 
   const deleteNotificationMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/notifications/${id}`);
+      await apiRequest("DELETE", `/api/notifications/${id}`, undefined, accessToken);
     },
   });
 
   const unreadCount =
     notifications?.filter((n: Notification) => !n.isRead).length || 0;
+
+  // Debug information
+  console.log("Header Debug:", {
+    user: user?.username,
+    userRole: user?.role,
+    accessToken: !!accessToken,
+    notificationsCount: notifications.length,
+    unreadCount,
+    notificationsLoading,
+    notificationsError
+  });
+
+  // Manual test function
+  const testNotifications = async () => {
+    console.log("Testing notifications API manually...");
+    try {
+      const res = await apiRequest("GET", "/api/notifications", undefined, accessToken);
+      const data = await res.json();
+      console.log("Manual notifications test result:", data);
+      toast({ title: "Notifications test successful", description: `Found ${data.length} notifications` });
+    } catch (error) {
+      console.error("Manual notifications test error:", error);
+      toast({ 
+        title: "Notifications test failed", 
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive" 
+      });
+    }
+  };
 
   const handleNotificationClick = async (n: Notification) => {
     if (!n.isRead) {
@@ -118,8 +157,9 @@ export default function Header() {
       <div className="w-full px-0">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
-              <Link href="/">
+          <div className="flex-grow-0">
+            <div className="flex items-center justify-start flex-shrink-0">
+              <Link to="/">
                 <div className="flex items-center space-x-3">
                   <img
                     src={Logo}
@@ -145,10 +185,10 @@ export default function Header() {
               if (!shouldShow || isOfficialOnly || isAdminOnly) return null;
 
               return (
-                <Link key={item.name} href={item.href}>
+                <Link key={item.name} to={item.href}>
                   <div
                     className={`flex items-center space-x-2 px-4 py-3 rounded-md text-base font-medium transition-colors ${
-                      location === item.href
+                      location.pathname === item.href
                         ? "text-primary-600 bg-primary-50"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
@@ -183,8 +223,18 @@ export default function Header() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-56 border border-black rounded-md shadow-lg"
+                    className="w-80 max-h-96 overflow-y-auto"
                   >
+                    <div className="px-4 py-2 border-b">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={testNotifications}
+                        className="w-full"
+                      >
+                        Test Notifications
+                      </Button>
+                    </div>
                     {notificationsLoading ? (
                       <div className="px-4 py-2 text-sm text-gray-500">
                         Loading...
@@ -266,7 +316,7 @@ export default function Header() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link
-                        href={
+                        to={
                           user.role === "admin"
                             ? "/admin-dashboard"
                             : user.role === "official"
@@ -292,10 +342,10 @@ export default function Header() {
               </>
             ) : (
               <div className="flex items-center space-x-2">
-                <Link href="/auth">
+                <Link to="/auth">
                   <Button variant="outline">Sign In</Button>
                 </Link>
-                <Link href="/features">
+                <Link to="/features">
                   <Button>
                     <Rocket size={16} className="mr-2" />
                     Features

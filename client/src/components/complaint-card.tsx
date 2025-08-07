@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Calendar, MapPin, Clock, Star } from "lucide-react";
 import type { Complaint } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ComplaintCardProps {
   complaint: Complaint;
@@ -18,6 +19,7 @@ interface ComplaintCardProps {
 
 export default function ComplaintCard({ complaint }: ComplaintCardProps) {
   const { toast } = useToast();
+  const { accessToken } = useAuth();
   const [showDetails, setShowDetails] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [rating, setRating] = useState(5);
@@ -25,7 +27,7 @@ export default function ComplaintCard({ complaint }: ComplaintCardProps) {
 
   const submitFeedbackMutation = useMutation({
     mutationFn: async (data: { rating: number; comment?: string }) => {
-      const res = await apiRequest("POST", `/api/complaints/${complaint.id}/feedback`, data);
+      const res = await apiRequest("POST", `/api/complaints/${complaint.id}/feedback`, data, accessToken);
       return res.json();
     },
     onSuccess: () => {

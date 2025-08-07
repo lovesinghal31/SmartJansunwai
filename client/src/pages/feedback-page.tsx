@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { MessageSquare, Star, Send, Filter, Calendar, User } from "lucide-react";
+import Header from "@/components/header";
 
 // Form schema for feedback submission
 const feedbackFormSchema = z.object({
@@ -24,7 +25,7 @@ const feedbackFormSchema = z.object({
 });
 
 export default function FeedbackPage() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const { toast } = useToast();
   const [selectedRating, setSelectedRating] = useState(0);
   const [filterStatus, setFilterStatus] = useState("all");
@@ -32,11 +33,20 @@ export default function FeedbackPage() {
   // Queries
   const { data: complaints = [] } = useQuery<any[]>({
     queryKey: ["/api/complaints"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/complaints", undefined, accessToken);
+      return res.json();
+    },
+    enabled: !!accessToken,
   });
 
   const { data: allFeedback = [] } = useQuery<any[]>({
     queryKey: ["/api/feedback/all"],
-    enabled: user?.role === "official",
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/feedback/all", undefined, accessToken);
+      return res.json();
+    },
+    enabled: !!accessToken && user?.role === "official",
   });
 
   // Get resolved complaints for citizens
@@ -45,14 +55,12 @@ export default function FeedbackPage() {
   // Feedback submission mutation
   const submitFeedbackMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch(`/api/complaints/${data.complaintId}/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include", // <-- ensure cookies/session are sent
-      });
-      if (!response.ok) throw new Error("Failed to submit feedback");
-      return response.json();
+      console.log("Submitting feedback with data:", data);
+      const res = await apiRequest("POST", `/api/complaints/${data.complaintId}/feedback`, {
+        rating: data.rating,
+        comment: data.comment || ""
+      }, accessToken);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/complaints"] });
@@ -61,24 +69,43 @@ export default function FeedbackPage() {
       form.reset();
       setSelectedRating(0);
     },
-    onError: async (error: any) => {
-      let message = "Please try again later";
-      if (error instanceof Error) {
-        message = error.message;
-        if ((error as any).response) {
-          try {
-            const data = await (error as any).response.json();
-            message = data.message || message;
-          } catch {}
-        }
-      }
+    onError: (error: Error) => {
+      console.error("Feedback submission error:", error);
       toast({ 
         title: "Failed to submit feedback", 
-        description: message, 
+        description: error.message || "Please try again later", 
         variant: "destructive" 
       });
     },
   });
+
+  // Manual test function
+  const testFeedbackSubmission = async () => {
+    if (resolvedComplaints.length === 0) {
+      toast({ title: "No resolved complaints to test with", variant: "destructive" });
+      return;
+    }
+    
+    const testComplaint = resolvedComplaints[0];
+    console.log("Testing feedback submission for complaint:", testComplaint.id);
+    
+    try {
+      const res = await apiRequest("POST", `/api/complaints/${testComplaint.id}/feedback`, {
+        rating: 5,
+        comment: "Test feedback submission"
+      }, accessToken);
+      const data = await res.json();
+      console.log("Test feedback submission result:", data);
+      toast({ title: "Test feedback submitted successfully" });
+    } catch (error) {
+      console.error("Test feedback submission error:", error);
+      toast({ 
+        title: "Test feedback submission failed", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    }
+  };
 
   // Form setup
   const form = useForm({
@@ -120,6 +147,7 @@ export default function FeedbackPage() {
     </div>
   );
 
+  // Citizen view for feedback submission
   if (user?.role === "citizen") {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -130,10 +158,15 @@ export default function FeedbackPage() {
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Feedback Center</h1>
                 <p className="text-gray-600 dark:text-gray-300">Share your experience and help us improve our services</p>
               </div>
-              <Badge variant="secondary" className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Citizen Feedback
-              </Badge>
+              <div className="flex items-center space-x-3">
+                <Button variant="outline" onClick={testFeedbackSubmission}>
+                  Test Feedback
+                </Button>
+                <Badge variant="secondary" className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Citizen Feedback
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
@@ -273,23 +306,39 @@ export default function FeedbackPage() {
 
   // Official/Admin view for feedback management
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="border-b bg-white dark:bg-gray-800">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Feedback Management</h1>
-              <p className="text-gray-600 dark:text-gray-300">Monitor and analyze citizen feedback</p>
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Debug Info */}
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <h3 className="font-semibold mb-2">Debug Information</h3>
+            <div className="text-sm space-y-1">
+              <p>User: {user?.username} (Role: {user?.role})</p>
+              <p>Access Token: {accessToken ? "Present" : "Missing"}</p>
+              <p>Total Complaints: {complaints.length}</p>
+              <p>Resolved Complaints: {resolvedComplaints.length}</p>
+              <p>Selected Rating: {selectedRating}</p>
+              {submitFeedbackMutation.error && (
+                <p className="text-red-600">Error: {submitFeedbackMutation.error.message}</p>
+              )}
             </div>
-            <Badge variant="secondary" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Official Dashboard
-            </Badge>
-          </div>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
 
-      <div className="container mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Feedback Management</h1>
+            <p className="text-gray-600 dark:text-gray-300">Monitor and analyze citizen feedback</p>
+          </div>
+          <Badge variant="secondary" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Official Dashboard
+          </Badge>
+        </div>
+
         {/* Statistics Cards */}
         <div className="grid gap-4 md:grid-cols-4 mb-6">
           <Card>

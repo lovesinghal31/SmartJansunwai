@@ -24,7 +24,7 @@ interface ComplaintStats {
 }
 
 export default function OfficialDashboard() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -33,19 +33,38 @@ export default function OfficialDashboard() {
   const [updateMessage, setUpdateMessage] = useState("");
   const [newStatus, setNewStatus] = useState("");
 
-  const { data: complaints = [], isLoading, refetch } = useQuery<Complaint[]>({
+  // Debug logging
+  console.log("Official Dashboard - User:", user);
+  console.log("Official Dashboard - User role:", user?.role);
+  console.log("Official Dashboard - Access token:", accessToken);
+
+  const { data: complaints = [], isLoading, refetch, error: complaintsError } = useQuery<Complaint[]>({
     queryKey: ["/api/complaints"],
+    queryFn: async () => {
+      console.log("Fetching complaints...");
+      const res = await apiRequest("GET", "/api/complaints", undefined, accessToken);
+      const data = await res.json();
+      console.log("Complaints data:", data);
+      return data;
+    },
     enabled: !!user && user.role === "official",
   });
 
-  const { data: stats } = useQuery<ComplaintStats>({
+  const { data: stats, error: statsError } = useQuery<ComplaintStats>({
     queryKey: ["/api/analytics/stats"],
+    queryFn: async () => {
+      console.log("Fetching stats...");
+      const res = await apiRequest("GET", "/api/analytics/stats", undefined, accessToken);
+      const data = await res.json();
+      console.log("Stats data:", data);
+      return data;
+    },
     enabled: !!user && user.role === "official",
   });
 
   const updateComplaintMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Complaint> }) => {
-      const res = await apiRequest("PATCH", `/api/complaints/${id}`, updates);
+      const res = await apiRequest("PATCH", `/api/complaints/${id}`, updates, accessToken);
       return res.json();
     },
     onSuccess: () => {
@@ -65,7 +84,7 @@ export default function OfficialDashboard() {
 
   const addUpdateMutation = useMutation({
     mutationFn: async ({ complaintId, message, status }: { complaintId: string; message: string; status?: string }) => {
-      const res = await apiRequest("POST", `/api/complaints/${complaintId}/updates`, { message, status });
+      const res = await apiRequest("POST", `/api/complaints/${complaintId}/updates`, { message, status }, accessToken);
       return res.json();
     },
     onSuccess: () => {
@@ -138,6 +157,22 @@ export default function OfficialDashboard() {
     );
   }
 
+  // Manual test function
+  const testApiCalls = async () => {
+    console.log("Testing API calls manually...");
+    try {
+      const complaintsRes = await apiRequest("GET", "/api/complaints", undefined, accessToken);
+      const complaintsData = await complaintsRes.json();
+      console.log("Manual complaints call result:", complaintsData);
+      
+      const statsRes = await apiRequest("GET", "/api/analytics/stats", undefined, accessToken);
+      const statsData = await statsRes.json();
+      console.log("Manual stats call result:", statsData);
+    } catch (error) {
+      console.error("Manual API call error:", error);
+    }
+  };
+
   const complaintsByStatus = {
     submitted: filteredComplaints.filter(c => c.status === "submitted"),
     "in-progress": filteredComplaints.filter(c => c.status === "in-progress"),
@@ -157,6 +192,12 @@ export default function OfficialDashboard() {
             <p className="text-gray-600 mt-1">Manage and resolve citizen complaints</p>
           </div>
           <div className="flex space-x-3 mt-4 sm:mt-0">
+            <Button variant="outline" onClick={testApiCalls}>
+              Test API
+            </Button>
+            <Button variant="outline" onClick={() => refetch()}>
+              Refresh Data
+            </Button>
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
               Export
@@ -167,6 +208,22 @@ export default function OfficialDashboard() {
             </Button>
           </div>
         </div>
+
+        {/* Debug Info */}
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <h3 className="font-semibold mb-2">Debug Information</h3>
+            <div className="text-sm space-y-1">
+              <p>User: {user?.username} (Role: {user?.role})</p>
+              <p>Access Token: {accessToken ? "Present" : "Missing"}</p>
+              <p>Complaints Loading: {isLoading ? "Yes" : "No"}</p>
+              <p>Complaints Count: {complaints.length}</p>
+              <p>Stats Count: {stats?.total || 0}</p>
+              {complaintsError && <p className="text-red-600">Complaints Error: {complaintsError.message}</p>}
+              {statsError && <p className="text-red-600">Stats Error: {statsError.message}</p>}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
