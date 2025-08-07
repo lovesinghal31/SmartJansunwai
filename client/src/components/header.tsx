@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Header() {
   const { user, logoutMutation, accessToken } = useAuth();
-  const location = useLocation();
+  const [location] = useLocation();
   const { t } = useTranslation();
   const { toast } = useToast();
 
@@ -171,6 +171,7 @@ export default function Header() {
                   </span>
                 </div>
               </Link>
+            </div>
           </div>
 </div>
 
@@ -188,7 +189,7 @@ export default function Header() {
                 <Link key={item.name} to={item.href}>
                   <div
                     className={`flex items-center space-x-2 px-4 py-3 rounded-md text-base font-medium transition-colors ${
-                      location.pathname === item.href
+                      location === item.href
                         ? "text-primary-600 bg-primary-50"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
