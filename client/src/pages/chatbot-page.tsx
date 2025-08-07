@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
@@ -6,247 +6,313 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  Bot, 
-  Send, 
-  Mic, 
-  User, 
-  MessageCircle, 
-  Clock, 
-  CheckCircle,
-  AlertCircle,
-  HelpCircle,
-  Lightbulb,
-  FileText,
-  Globe
+  Bot, Send, Mic, User, MessageCircle, Clock, CheckCircle,
+  AlertCircle, HelpCircle, Lightbulb, FileText, Globe, History
 } from "lucide-react";
 
+// Firebase Imports for Database
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, addDoc, query, onSnapshot, orderBy } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+
+// --- Multi-language Support Setup ---
+const translations = {
+  en: {
+    smartAssistant: "Smart Assistant",
+    tagline: "Get instant help with complaints, civic processes, and more. Available 24/7 in Hindi and English.",
+    aiAssistant: "AI Assistant",
+    online: "Online",
+    hindi: "हिंदी",
+    english: "English",
+    typeQuestion: "Type your question here...",
+    pastQuestions: "Past Questions",
+    knowledgeBase: "Knowledge Base",
+    commonQuestions: "Common Questions",
+    initialBotMessage: "Hello! I'm your Jansunwai AI Assistant. I can help you with:\n\n• Filing complaints and tracking status\n• Understanding civic processes\n• Finding the right department for your issue\n• Providing complaint guidelines\n\nHow can I assist you today?",
+  },
+  hi: {
+    smartAssistant: "स्मार्ट सहायक",
+    tagline: "शिकایات, नागरिक प्रक्रियाओं आदि के लिए तुरंत सहायता प्राप्त करें। हिंदी और अंग्रेजी में 24/7 उपलब्ध।",
+    aiAssistant: "एआई सहायक",
+    online: "ऑनलाइन",
+    hindi: "हिंदी",
+    english: "English",
+    typeQuestion: "अपना प्रश्न यहाँ लिखें...",
+    pastQuestions: "पिछले प्रश्न",
+    knowledgeBase: "ज्ञान आधार",
+    commonQuestions: "सामान्य प्रश्न",
+    initialBotMessage: "नमस्ते! मैं आपका जनसुनवाई एआई सहायक हूँ। मैं आपकी मदद कर सकता हूँ:\n\n• शिकायतें दर्ज करना और स्थिति ट्रैक करना\n• नागरिक प्रक्रियाओं को समझना\n• आपकी समस्या के लिए सही विभाग खोजना\n• शिकायत दिशानिर्देश प्रदान करना\n\nआज मैं आपकी कैसे सहायता कर सकता हूँ?",
+  }
+};
+
 interface ChatMessage {
-  id: string;
+  id?: string;
   type: 'user' | 'bot';
   message: string;
   timestamp: Date;
   suggestions?: string[];
 }
 
+// --- Firebase Configuration ---
+const firebaseConfig = {
+  apiKey: "AIzaSyCa1e4UrB1xxKsRdvOrDVc0B1Qeo5sYxpY",
+  authDomain: "samadhanplus-3987d.firebaseapp.com",
+  projectId: "samadhanplus-3987d",
+  storageBucket: "samadhanplus-3987d.appspot.com",
+  messagingSenderId: "508021280392",
+  appId: "1:508021280392:web:73e7fbb0bfe9774b0c193d",
+  measurementId: "G-ZSEB8QPYPB"
+};
+
+declare const __app_id: any;
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
 export default function ChatbotPage() {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      type: 'bot',
-      message: "Hello! I'm your Jansunwai AI Assistant. I can help you with:\n\n• Filing complaints and tracking status\n• Understanding civic processes\n• Finding the right department for your issue\n• Providing complaint guidelines\n\nHow can I assist you today?",
-      timestamp: new Date(),
-      suggestions: [
-        "How to file a complaint?",
-        "Track my complaint status",
-        "Water supply issues",
-        "Road repair request"
-      ]
-    }
-  ]);
+  const userId = user?.id;
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState("");
-  const [isListening, setIsListening] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [language, setLanguage] = useState<'en' | 'hi'>('en');
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const t = (key: keyof typeof translations.en) => translations[language][key] || translations.en[key];
 
   const commonQuestions = [
-    {
-      icon: FileText,
-      question: "How to file a complaint?",
-      category: "Getting Started"
-    },
-    {
-      icon: Clock,
-      question: "What is the complaint resolution timeline?",
-      category: "Process"
-    },
-    {
-      icon: CheckCircle,
-      question: "How to track complaint status?",
-      category: "Tracking"
-    },
-    {
-      icon: AlertCircle,
-      question: "What if my complaint is urgent?",
-      category: "Emergency"
-    },
-    {
-      icon: HelpCircle,
-      question: "Which department handles water issues?",
-      category: "Departments"
-    },
-    {
-      icon: Globe,
-      question: "Can I file complaints in Hindi?",
-      category: "Language"
-    }
+    { icon: FileText, question: "How to file a complaint?", category: "Getting Started" },
+    { icon: Clock, question: "What is the complaint resolution timeline?", category: "Process" },
+    { icon: CheckCircle, question: "How to track complaint status?", category: "Tracking" },
+    { icon: AlertCircle, question: "What if my complaint is urgent?", category: "Emergency" },
+    { icon: HelpCircle, question: "Which department handles water issues?", category: "Departments" },
+    { icon: Globe, question: "Can I file complaints in Hindi?", category: "Language" }
   ];
 
   const knowledgeBase = [
-    {
-      title: "Filing Your First Complaint",
-      description: "Step-by-step guide to submit complaints effectively",
-      icon: FileText,
-      color: "bg-blue-100 text-blue-800"
-    },
-    {
-      title: "Understanding SLA Timeline",
-      description: "Learn about service level agreements and expected resolution times",
-      icon: Clock,
-      color: "bg-green-100 text-green-800"
-    },
-    {
-      title: "Department Directory",
-      description: "Find the right department for your specific issue",
-      icon: HelpCircle,
-      color: "bg-purple-100 text-purple-800"
-    },
-    {
-      title: "Emergency Procedures",
-      description: "What to do for urgent civic issues requiring immediate attention",
-      icon: AlertCircle,
-      color: "bg-red-100 text-red-800"
-    }
+    { title: "Filing Your First Complaint", description: "Step-by-step guide to submit complaints effectively", icon: FileText, color: "bg-blue-100 text-blue-800" },
+    { title: "Understanding SLA Timeline", description: "Learn about service level agreements and expected resolution times", icon: Clock, color: "bg-green-100 text-green-800" },
+    { title: "Department Directory", description: "Find the right department for your specific issue", icon: HelpCircle, color: "bg-purple-100 text-purple-800" },
+    { title: "Emergency Procedures", description: "What to do for urgent civic issues requiring immediate attention", icon: AlertCircle, color: "bg-red-100 text-red-800" }
   ];
+  
+  useEffect(() => {
+    if (!userId) return;
+    console.log(`DEBUG: Setting up Firestore listener for userId: ${userId}`);
 
-  const handleSendMessage = () => {
-    if (!currentMessage.trim()) return;
+    const chatHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
+    const q = query(chatHistoryCollection, orderBy("timestamp", "asc"));
+
+    const dataUnsubscribe = onSnapshot(q, (querySnapshot) => {
+      const fetchedMessages: ChatMessage[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        fetchedMessages.push({
+          id: doc.id,
+          ...data,
+          timestamp: data.timestamp.toDate(),
+        } as ChatMessage);
+      });
+      
+      if (fetchedMessages.length === 0) {
+        const initialMessage: ChatMessage = {
+          id: '1',
+          type: 'bot',
+          message: t('initialBotMessage'),
+          timestamp: new Date(),
+          suggestions: [ "How to file a complaint?", "Track my complaint status", "Water supply issues", "Road repair request" ]
+        };
+        setMessages([initialMessage]);
+      } else {
+        setMessages(fetchedMessages);
+      }
+    }, (error) => {
+      console.error("DEBUG: Firestore snapshot error:", error);
+    });
+
+    return () => dataUnsubscribe();
+  }, [userId, language]);
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [messages, isTyping]);
+
+  const getAIResponse = async (userInput: string) => {
+    setIsTyping(true);
+    
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+    if (!apiKey) {
+      const errorMessage: ChatMessage = {
+        type: 'bot',
+        message: "AI service is not configured. The VITE_GEMINI_API_KEY is missing from the .env file.",
+        timestamp: new Date()
+      };
+      if (userId) {
+        const chatHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
+        await addDoc(chatHistoryCollection, errorMessage);
+      }
+      setIsTyping(false);
+      return;
+    }
+    
+    // --- FIX: Enhanced system prompt with specific context about the website ---
+    const systemPrompt = `You are the "Smart Jansunwai" AI Assistant for the city of Indore. Your purpose is to help users of this specific website.
+    Key features of the website you should know about:
+    - Complaint Filing: Users can submit complaints about civic issues.
+    - Status Tracking: Users can track the status of their submitted complaints.
+    - Interactive Map: A map view shows the location of various complaints.
+    - Department Directory: Information on municipal departments.
+    Your role is to answer questions strictly related to these features and other civic issues in Indore. If a user asks a question outside of this domain (e.g., about movies, celebrities, general knowledge), you must politely decline to answer and guide them back to relevant topics.
+    Answer the following user query in ${language === 'hi' ? 'Hindi' : 'English'}.`;
+
+    // --- FIX: Include previous messages for conversational context ---
+    const conversationHistory = messages.slice(-6).map(msg => ({
+      role: msg.type === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.message }]
+    }));
+
+    const payload = { 
+      contents: [
+        ...conversationHistory,
+        { role: "user", parts: [{ text: systemPrompt + `\n\nUser Question: "${userInput}"` }] }
+      ]
+    };
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      
+      let botMessageText = "I'm sorry, I couldn't process that request. Please try asking in a different way.";
+      if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts.length > 0) {
+        botMessageText = result.candidates[0].content.parts[0].text;
+      } else if (result.error) {
+        botMessageText = `AI Error: ${result.error.message}`;
+      }
+      
+      const botMessage: ChatMessage = {
+        type: 'bot',
+        message: botMessageText,
+        timestamp: new Date()
+      };
+      
+      if (userId) {
+        const chatHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
+        await addDoc(chatHistoryCollection, botMessage);
+      }
+
+    } catch (error) {
+      console.error("DEBUG: Error fetching AI response:", error);
+      const errorMessage: ChatMessage = {
+        type: 'bot',
+        message: "There was an error connecting to the AI service. Please try again later.",
+        timestamp: new Date()
+      };
+      if (userId) {
+        const chatHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
+        await addDoc(chatHistoryCollection, errorMessage);
+      }
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!currentMessage.trim() || !userId) return;
 
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
       type: 'user',
       message: currentMessage,
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const chatHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
+    await addDoc(chatHistoryCollection, userMessage);
+    
+    getAIResponse(currentMessage);
     setCurrentMessage("");
-    setIsTyping(true);
-
-    // Simulate AI response
-    setTimeout(() => {
-      const botResponse = generateBotResponse(currentMessage);
-      setMessages(prev => [...prev, botResponse]);
-      setIsTyping(false);
-    }, 1500);
-  };
-
-  const generateBotResponse = (userInput: string): ChatMessage => {
-    const input = userInput.toLowerCase();
-    let response = "";
-    let suggestions: string[] = [];
-
-    if (input.includes("file") || input.includes("submit") || input.includes("complaint")) {
-      response = "To file a complaint:\n\n1. Go to the 'Submit Complaint' section\n2. Select the appropriate category (Water, Roads, etc.)\n3. Provide detailed description and location\n4. Upload supporting photos if available\n5. Submit and note your complaint ID\n\nYou'll receive updates via SMS and can track status anytime.";
-      suggestions = ["What documents do I need?", "How long does review take?", "Can I edit after submission?"];
-    } else if (input.includes("track") || input.includes("status")) {
-      response = "To track your complaint:\n\n1. Go to 'My Complaints' dashboard\n2. Find your complaint by ID or date\n3. View real-time status updates\n4. Check official responses and estimated resolution\n\nYou can also use the search function to quickly find specific complaints.";
-      suggestions = ["Why is my complaint pending?", "How to get faster resolution?", "Contact assigned officer"];
-    } else if (input.includes("water") || input.includes("supply")) {
-      response = "For water supply issues:\n\n• **Department**: Water Supply & Sewerage\n• **Typical Resolution**: 2-3 working days\n• **Emergency Contact**: 1800-XXX-XXXX\n\nCommon issues handled:\n- No water supply\n- Low pressure\n- Contaminated water\n- Pipe leaks\n- Billing disputes";
-      suggestions = ["File water complaint", "Emergency water contact", "Check water quality"];
-    } else if (input.includes("road") || input.includes("pothole")) {
-      response = "For road and transportation issues:\n\n• **Department**: Road & Transportation\n• **Typical Resolution**: 5-7 working days\n• **Priority**: Based on traffic density and safety\n\nCommon issues:\n- Potholes and road damage\n- Street lighting\n- Traffic signals\n- Parking issues\n- Construction debris";
-      suggestions = ["Report pothole", "Street light not working", "Traffic signal issue"];
-    } else if (input.includes("hindi") || input.includes("language")) {
-      response = "Yes! Jansunwai supports multiple languages:\n\n🇮🇳 **Hindi**: पूर्ण समर्थन उपलब्ध\n🇬🇧 **English**: Full support available\n\nYou can:\n- Switch language using the toggle in header\n- File complaints in your preferred language\n- Receive updates in your chosen language\n- Use voice input in Hindi or English";
-      suggestions = ["How to change language?", "Voice input in Hindi", "Get updates in Hindi"];
-    } else {
-      response = "I understand you're looking for help. Here are some ways I can assist:\n\n• **Complaint Filing**: Guide you through the submission process\n• **Status Tracking**: Help check your complaint progress\n• **Department Info**: Connect you with the right office\n• **Process Guidance**: Explain civic procedures\n\nCould you please specify what you'd like help with?";
-      suggestions = ["File new complaint", "Track existing complaint", "Department contacts", "Emergency help"];
-    }
-
-    return {
-      id: Date.now().toString() + 1,
-      type: 'bot',
-      message: response,
-      timestamp: new Date(),
-      suggestions
-    };
   };
 
   const handleSuggestionClick = (suggestion: string) => {
     setCurrentMessage(suggestion);
   };
 
-  const startVoiceInput = () => {
-    setIsListening(true);
-    // Simulate voice input
-    setTimeout(() => {
-      setCurrentMessage("How can I file a water supply complaint?");
-      setIsListening(false);
-    }, 2000);
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en' ? 'hi' : 'en');
   };
+
+  const pastQuestions = messages.filter(m => m.type === 'user').slice(-5).reverse();
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-4">
             <div className="w-12 h-12 bg-primary-600 rounded-full flex items-center justify-center">
               <Bot className="text-white" size={24} />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Smart Assistant</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('smartAssistant')}</h1>
           </div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Get instant help with complaints, civic processes, and more. Available 24/7 in Hindi and English.
-          </p>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">{t('tagline')}</p>
         </div>
 
         <div className="grid lg:grid-cols-4 gap-8">
-          {/* Chat Interface */}
-          <div className="lg:col-span-3">
-            <Card className="h-[600px] flex flex-col">
+          <div className="lg:col-span-3 space-y-6">
+            <Card className="h-[650px] flex flex-col">
               <CardHeader className="border-b">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center space-x-2">
                     <Bot className="text-primary-600" size={20} />
-                    <span>AI Assistant</span>
-                    <Badge className="bg-green-100 text-green-800">Online</Badge>
+                    <span>{t('aiAssistant')}</span>
+                    <Badge className="bg-green-100 text-green-800">{t('online')}</Badge>
                   </CardTitle>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      <Globe size={16} className="mr-1" />
-                      हिंदी
-                    </Button>
-                  </div>
+                  <Button variant="outline" size="sm" onClick={toggleLanguage}>
+                    <Globe size={16} className="mr-1" />
+                    {language === 'en' ? t('hindi') : t('english')}
+                  </Button>
                 </div>
               </CardHeader>
               
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {messages.map((message) => (
-                  <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-xs lg:max-w-md flex space-x-3 ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                        message.type === 'user' ? 'bg-primary-600' : 'bg-gray-200'
-                      }`}>
-                        {message.type === 'user' ? (
-                          <User className="text-white" size={16} />
-                        ) : (
+              <ScrollArea className="flex-1" ref={scrollAreaRef}>
+                <div className="p-6 space-y-6">
+                  {messages.map((message, index) => (
+                    <div key={message.id || index} className={`flex items-start gap-4 ${message.type === 'user' ? 'justify-end' : ''}`}>
+                      {message.type === 'bot' && (
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
                           <Bot className="text-gray-600" size={16} />
-                        )}
-                      </div>
-                      <div className={`rounded-lg p-3 ${
+                        </div>
+                      )}
+                      <div className={`max-w-md rounded-lg p-3 ${
                         message.type === 'user' 
-                          ? 'bg-primary-600 text-white' 
-                          : 'bg-gray-100 text-gray-900'
+                          ? 'bg-blue-100 text-black rounded-br-none' 
+                          : 'bg-gray-100 text-gray-900 rounded-bl-none'
                       }`}>
                         <p className="text-sm whitespace-pre-wrap">{message.message}</p>
-                        <p className="text-xs mt-2 opacity-70">
-                          {message.timestamp.toLocaleTimeString()}
+                        <p className="text-xs mt-2 opacity-70 text-right">
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                         {message.suggestions && (
-                          <div className="mt-3 space-y-1">
+                          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {message.suggestions.map((suggestion, index) => (
                               <button
                                 key={index}
                                 onClick={() => handleSuggestionClick(suggestion)}
-                                className="block w-full text-left text-xs px-2 py-1 bg-white bg-opacity-20 rounded hover:bg-opacity-30 transition-colors"
+                                className="text-left text-xs px-3 py-2 bg-gray-200/50 rounded-md hover:bg-gray-200/80 transition-colors"
                               >
                                 {suggestion}
                               </button>
@@ -254,63 +320,52 @@ export default function ChatbotPage() {
                           </div>
                         )}
                       </div>
+                       {message.type === 'user' && (
+                        <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
+                          <User className="text-white" size={16} />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
-                
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="flex space-x-3">
-                      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                  ))}
+                  
+                  {isTyping && (
+                    <div className="flex items-start gap-4">
+                      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                         <Bot className="text-gray-600" size={16} />
                       </div>
-                      <div className="bg-gray-100 rounded-lg p-3">
-                        <div className="flex space-x-1">
+                      <div className="bg-gray-100 rounded-lg p-3 rounded-bl-none">
+                        <div className="flex items-center gap-1.5">
                           <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                           <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                           <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              </ScrollArea>
               
-              {/* Input */}
-              <div className="border-t p-4">
-                <div className="flex space-x-2">
-                  <div className="flex-1 relative">
-                    <Input
-                      value={currentMessage}
-                      onChange={(e) => setCurrentMessage(e.target.value)}
-                      placeholder="Type your question here..."
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      className="pr-12"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={startVoiceInput}
-                      className={`absolute right-2 top-1/2 transform -translate-y-1/2 ${isListening ? 'text-red-500' : 'text-gray-400'}`}
-                    >
-                      <Mic size={16} />
-                    </Button>
-                  </div>
-                  <Button onClick={handleSendMessage} disabled={!currentMessage.trim()}>
-                    <Send size={16} />
+              <div className="border-t p-4 bg-white">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={currentMessage}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    placeholder={t('typeQuestion')}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    className="flex-1"
+                  />
+                  <Button variant="ghost" size="icon">
+                    <Mic />
+                  </Button>
+                  <Button onClick={handleSendMessage} disabled={!currentMessage.trim() || isTyping}>
+                    <Send />
                   </Button>
                 </div>
               </div>
             </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Quick Questions */}
+            
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Common Questions</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="text-lg">{t('commonQuestions')}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {commonQuestions.map((item, index) => (
                   <button
@@ -318,8 +373,8 @@ export default function ChatbotPage() {
                     onClick={() => handleSuggestionClick(item.question)}
                     className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors"
                   >
-                    <div className="flex items-start space-x-3">
-                      <item.icon className="text-primary-600 mt-1" size={16} />
+                    <div className="flex items-start gap-3">
+                      <item.icon className="text-primary-600 mt-1 flex-shrink-0" size={16} />
                       <div>
                         <p className="text-sm font-medium text-gray-900">{item.question}</p>
                         <p className="text-xs text-gray-500">{item.category}</p>
@@ -329,17 +384,34 @@ export default function ChatbotPage() {
                 ))}
               </CardContent>
             </Card>
+          </div>
 
-            {/* Knowledge Base */}
+          <div className="lg:col-span-1 space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Knowledge Base</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="text-lg">{t('pastQuestions')}</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {pastQuestions.length > 0 ? pastQuestions.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleSuggestionClick(item.message)}
+                    className="w-full text-left p-3 text-xs rounded-lg border hover:bg-gray-50 transition-colors truncate"
+                  >
+                    <div className="flex items-center gap-2">
+                      <History className="text-gray-400 flex-shrink-0" size={14} />
+                      <span>{item.message}</span>
+                    </div>
+                  </button>
+                )) : <p className="text-sm text-gray-500">Your recent questions will appear here.</p>}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="text-lg">{t('knowledgeBase')}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {knowledgeBase.map((item, index) => (
                   <div key={index} className="p-3 rounded-lg border">
-                    <div className="flex items-start space-x-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.color}`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.color}`}>
                         <item.icon size={16} />
                       </div>
                       <div>
@@ -349,31 +421,6 @@ export default function ChatbotPage() {
                     </div>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-
-            {/* Features */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">AI Features</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center space-x-3 p-2">
-                  <Lightbulb className="text-yellow-500" size={16} />
-                  <span className="text-sm">Smart Suggestions</span>
-                </div>
-                <div className="flex items-center space-x-3 p-2">
-                  <MessageCircle className="text-blue-500" size={16} />
-                  <span className="text-sm">Natural Language</span>
-                </div>
-                <div className="flex items-center space-x-3 p-2">
-                  <Mic className="text-green-500" size={16} />
-                  <span className="text-sm">Voice Input</span>
-                </div>
-                <div className="flex items-center space-x-3 p-2">
-                  <Globe className="text-purple-500" size={16} />
-                  <span className="text-sm">Multilingual</span>
-                </div>
               </CardContent>
             </Card>
           </div>
