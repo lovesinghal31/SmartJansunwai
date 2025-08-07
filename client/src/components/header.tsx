@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Header() {
   const { user, logoutMutation, accessToken } = useAuth();
-  const [location] = useLocation();
+  const location = useLocation();
   const { t } = useTranslation();
   const { toast } = useToast();
 
@@ -159,7 +159,7 @@ export default function Header() {
           {/* Logo */}
           <div className="flex-grow-0">
             <div className="flex items-center justify-start flex-shrink-0">
-              <Link href="/">
+              <Link to="/">
                 <div className="flex items-center space-x-3">
                   <img
                     src={Logo}
@@ -185,10 +185,10 @@ export default function Header() {
               if (!shouldShow || isOfficialOnly || isAdminOnly) return null;
 
               return (
-                <Link key={item.name} href={item.href}>
+                <Link key={item.name} to={item.href}>
                   <div
                     className={`flex items-center space-x-2 px-4 py-3 rounded-md text-base font-medium transition-colors ${
-                      location === item.href
+                      location.pathname === item.href
                         ? "text-primary-600 bg-primary-50"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
@@ -316,7 +316,7 @@ export default function Header() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link
-                        href={
+                        to={
                           user.role === "admin"
                             ? "/admin-dashboard"
                             : user.role === "official"
@@ -342,10 +342,10 @@ export default function Header() {
               </>
             ) : (
               <div className="flex items-center space-x-2">
-                <Link href="/auth">
+                <Link to="/auth">
                   <Button variant="outline">Sign In</Button>
                 </Link>
-                <Link href="/features">
+                <Link to="/features">
                   <Button>
                     <Rocket size={16} className="mr-2" />
                     Features

@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link } from "react-router-dom";
 import { Mail, Phone, MapPin, Globe, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 
 export default function Footer() {
@@ -31,17 +31,17 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/features" className="text-gray-300 hover:text-white transition-colors">
+                <Link to="/features" className="text-gray-300 hover:text-white transition-colors">
                   Platform Features
                 </Link>
               </li>
               <li>
-                <Link href="/chatbot" className="text-gray-300 hover:text-white transition-colors">
+                <Link to="/chatbot" className="text-gray-300 hover:text-white transition-colors">
                   AI Assistant
                 </Link>
               </li>
               <li>
-                <Link href="/complaint-map" className="text-gray-300 hover:text-white transition-colors">
+                <Link to="/complaint-map" className="text-gray-300 hover:text-white transition-colors">
                   Complaint Map
                 </Link>
               </li>
