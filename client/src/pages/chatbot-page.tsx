@@ -6,10 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Bot, Send, Mic, User, MessageCircle, Clock, CheckCircle,
-  AlertCircle, HelpCircle, Lightbulb, FileText, Globe, History
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Bot,
+  Send,
+  Mic,
+  User,
+  MessageCircle,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  HelpCircle,
+  Lightbulb,
+  FileText,
+  Globe
 } from "lucide-react";
 
 // Firebase Imports for Database
@@ -259,7 +269,7 @@ export default function ChatbotPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-4">
@@ -271,9 +281,11 @@ export default function ChatbotPage() {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">{t('tagline')}</p>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-3 space-y-6">
-            <Card className="h-[650px] flex flex-col">
+        {/* This is the key change: use flexbox for column layout on large screens */}
+        <div className="grid lg:grid-cols-4 gap-8 items-stretch">
+          {/* Chat Interface - Stretches to match height */}
+          <div className="lg:col-span-3 flex">
+            <Card className="flex-1 flex flex-col">
               <CardHeader className="border-b">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center space-x-2">
@@ -287,20 +299,25 @@ export default function ChatbotPage() {
                   </Button>
                 </div>
               </CardHeader>
-              
-              <ScrollArea className="flex-1" ref={scrollAreaRef}>
-                <div className="p-6 space-y-6">
-                  {messages.map((message, index) => (
-                    <div key={message.id || index} className={`flex items-start gap-4 ${message.type === 'user' ? 'justify-end' : ''}`}>
-                      {message.type === 'bot' && (
-                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {messages.map((message) => (
+                  <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-xs lg:max-w-md flex space-x-3 ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                        message.type === 'user' ? 'bg-primary-600' : 'bg-gray-200'
+                      }`}>
+                        {message.type === 'user' ? (
+                          <User className="text-white" size={16} />
+                        ) : (
                           <Bot className="text-gray-600" size={16} />
-                        </div>
-                      )}
-                      <div className={`max-w-md rounded-lg p-3 ${
-                        message.type === 'user' 
-                          ? 'bg-blue-100 text-black rounded-br-none' 
-                          : 'bg-gray-100 text-gray-900 rounded-bl-none'
+                        )}
+                      </div>
+                      <div className={`rounded-lg p-3 ${
+                        message.type === 'user'
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-gray-100 text-gray-900'
                       }`}>
                         <p className="text-sm whitespace-pre-wrap">{message.message}</p>
                         <p className="text-xs mt-2 opacity-70 text-right">
@@ -320,17 +337,14 @@ export default function ChatbotPage() {
                           </div>
                         )}
                       </div>
-                       {message.type === 'user' && (
-                        <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
-                          <User className="text-white" size={16} />
-                        </div>
-                      )}
                     </div>
-                  ))}
-                  
-                  {isTyping && (
-                    <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                  </div>
+                ))}
+
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className="flex space-x-3">
+                      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                         <Bot className="text-gray-600" size={16} />
                       </div>
                       <div className="bg-gray-100 rounded-lg p-3 rounded-bl-none">
@@ -341,31 +355,45 @@ export default function ChatbotPage() {
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              </ScrollArea>
-              
-              <div className="border-t p-4 bg-white">
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={currentMessage}
-                    onChange={(e) => setCurrentMessage(e.target.value)}
-                    placeholder={t('typeQuestion')}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    className="flex-1"
-                  />
-                  <Button variant="ghost" size="icon">
-                    <Mic />
-                  </Button>
-                  <Button onClick={handleSendMessage} disabled={!currentMessage.trim() || isTyping}>
-                    <Send />
+                  </div>
+                )}
+              </div>
+
+              {/* Input */}
+              <div className="border-t p-4">
+                <div className="flex space-x-2">
+                  <div className="flex-1 relative">
+                    <Input
+                      value={currentMessage}
+                      onChange={(e) => setCurrentMessage(e.target.value)}
+                      placeholder="Type your question here..."
+                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      className="pr-12"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={startVoiceInput}
+                      className={`absolute right-2 top-1/2 transform -translate-y-1/2 ${isListening ? 'text-red-500' : 'text-gray-400'}`}
+                    >
+                      <Mic size={16} />
+                    </Button>
+                  </div>
+                  <Button onClick={handleSendMessage} disabled={!currentMessage.trim()}>
+                    <Send size={16} />
                   </Button>
                 </div>
               </div>
             </Card>
-            
-            <Card>
-              <CardHeader><CardTitle className="text-lg">{t('commonQuestions')}</CardTitle></CardHeader>
+          </div>
+
+          {/* Sidebar content - Stretches to match height */}
+          <div className="lg:col-span-1 flex flex-col space-y-6">
+            {/* Quick Questions - The height of this card now determines the total height */}
+            <Card className="flex-1">
+              <CardHeader>
+                <CardTitle className="text-lg">Common Questions</CardTitle>
+              </CardHeader>
               <CardContent className="space-y-3">
                 {commonQuestions.map((item, index) => (
                   <button
@@ -381,45 +409,6 @@ export default function ChatbotPage() {
                       </div>
                     </div>
                   </button>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="lg:col-span-1 space-y-6">
-            <Card>
-              <CardHeader><CardTitle className="text-lg">{t('pastQuestions')}</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                {pastQuestions.length > 0 ? pastQuestions.map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleSuggestionClick(item.message)}
-                    className="w-full text-left p-3 text-xs rounded-lg border hover:bg-gray-50 transition-colors truncate"
-                  >
-                    <div className="flex items-center gap-2">
-                      <History className="text-gray-400 flex-shrink-0" size={14} />
-                      <span>{item.message}</span>
-                    </div>
-                  </button>
-                )) : <p className="text-sm text-gray-500">Your recent questions will appear here.</p>}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader><CardTitle className="text-lg">{t('knowledgeBase')}</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                {knowledgeBase.map((item, index) => (
-                  <div key={index} className="p-3 rounded-lg border">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.color}`}>
-                        <item.icon size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                        <p className="text-xs text-gray-500 mt-1">{item.description}</p>
-                      </div>
-                    </div>
-                  </div>
                 ))}
               </CardContent>
             </Card>
