@@ -157,8 +157,9 @@ export default function Header() {
       <div className="w-full px-0">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
-              <Link href="/">
+          <div className="flex-grow-0">
+            <div className="flex items-center justify-start flex-shrink-0">
+              <Link to="/">
                 <div className="flex items-center space-x-3">
                   <img
                     src={Logo}
@@ -222,8 +223,18 @@ export default function Header() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-56 border border-black rounded-md shadow-lg"
+                    className="w-80 max-h-96 overflow-y-auto"
                   >
+                    <div className="px-4 py-2 border-b">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={testNotifications}
+                        className="w-full"
+                      >
+                        Test Notifications
+                      </Button>
+                    </div>
                     {notificationsLoading ? (
                       <div className="px-4 py-2 text-sm text-gray-500">
                         Loading...
