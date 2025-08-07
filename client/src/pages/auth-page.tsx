@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom"; // ✅ Correct hook
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +31,7 @@ type RegisterData = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate(); // ✅ Correct hook
   const [activeTab, setActiveTab] = useState("login");
 
   const loginForm = useForm<LoginData>({
@@ -53,16 +53,16 @@ export default function AuthPage() {
     },
   });
 
-  // Redirect if already logged in (moved outside of component body to avoid re-render issues)
+  // Redirect if already logged in
   if (user) {
-    setTimeout(() => setLocation("/"), 0);
+    setTimeout(() => navigate("/"), 0);
     return null;
   }
 
   const onLogin = (data: LoginData) => {
     loginMutation.mutate(data, {
       onSuccess: () => {
-        setLocation("/");
+        navigate("/"); // ✅ Correct usage
       },
     });
   };
@@ -71,7 +71,7 @@ export default function AuthPage() {
     const { confirmPassword, ...registerData } = data;
     registerMutation.mutate(registerData, {
       onSuccess: () => {
-        setLocation("/");
+        navigate("/"); // ✅ Correct usage
       },
     });
   };
@@ -90,15 +90,15 @@ export default function AuthPage() {
               <p className="text-sm text-gray-600">Indore Smart City</p>
             </div>
           </div>
-          
+
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
             Smart Grievance Redressal Platform
           </h2>
-          
+
           <p className="text-lg text-gray-600">
             Join thousands of citizens and officials working together to build a better Indore through efficient complaint management and resolution.
           </p>
-          
+
           <div className="grid grid-cols-2 gap-6 mt-8">
             <div className="text-center p-4 bg-white rounded-lg shadow-sm">
               <Shield className="mx-auto mb-2 text-primary-600" size={24} />
@@ -134,7 +134,7 @@ export default function AuthPage() {
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="register">Register</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="login">
                 <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
                   <div>
@@ -150,7 +150,7 @@ export default function AuthPage() {
                       </p>
                     )}
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="login-password">Password</Label>
                     <Input
@@ -165,7 +165,7 @@ export default function AuthPage() {
                       </p>
                     )}
                   </div>
-                  
+
                   <Button
                     type="submit"
                     className="w-full"
@@ -175,7 +175,7 @@ export default function AuthPage() {
                   </Button>
                 </form>
               </TabsContent>
-              
+
               <TabsContent value="register">
                 <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
                   <div>
@@ -191,7 +191,7 @@ export default function AuthPage() {
                       </p>
                     )}
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="register-role">Role</Label>
                     <Select
@@ -214,7 +214,7 @@ export default function AuthPage() {
                       </p>
                     )}
                   </div>
-                  
+
                   {registerForm.watch("role") === "official" && (
                     <div>
                       <Label htmlFor="register-department">Department</Label>
@@ -241,7 +241,7 @@ export default function AuthPage() {
                       )}
                     </div>
                   )}
-                  
+
                   <div>
                     <Label htmlFor="register-password">Password</Label>
                     <Input
@@ -256,7 +256,7 @@ export default function AuthPage() {
                       </p>
                     )}
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="register-confirm-password">Confirm Password</Label>
                     <Input
@@ -271,7 +271,7 @@ export default function AuthPage() {
                       </p>
                     )}
                   </div>
-                  
+
                   <Button
                     type="submit"
                     className="w-full"
