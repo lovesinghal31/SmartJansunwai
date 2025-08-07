@@ -92,7 +92,7 @@ export default function Header() {
       console.error("Manual notifications test error:", error);
       toast({ 
         title: "Notifications test failed", 
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive" 
       });
     }
