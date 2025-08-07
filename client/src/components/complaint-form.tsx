@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ComplaintFormProps {
   onSuccess?: () => void;
@@ -17,6 +18,7 @@ interface ComplaintFormProps {
 
 export default function ComplaintForm({ onSuccess }: ComplaintFormProps) {
   const { toast } = useToast();
+  const { accessToken } = useAuth();
   
   const form = useForm<InsertComplaint>({
     resolver: zodResolver(insertComplaintSchema),
@@ -31,7 +33,7 @@ export default function ComplaintForm({ onSuccess }: ComplaintFormProps) {
 
   const createComplaintMutation = useMutation({
     mutationFn: async (data: InsertComplaint) => {
-      const res = await apiRequest("POST", "/api/complaints", data);
+      const res = await apiRequest("POST", "/api/complaints", data, accessToken);
       return res.json();
     },
     onSuccess: () => {

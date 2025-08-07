@@ -5,20 +5,39 @@ import { storage } from "./storage";
 import { insertComplaintSchema, insertComplaintUpdateSchema, insertFeedbackSchema, insertDepartmentSchema, insertSlaSettingsSchema, insertNotificationSchema } from "@shared/schema";
 import { z } from "zod";
 
+// Extend Express Request type to include user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        role: string;
+        username: string;
+      };
+    }
+  }
+}
+
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
   // Complaint routes
   app.get("/api/complaints", authenticateJWT, async (req, res) => {
     try {
+      console.log("Complaints route called - User:", req.user);
+      console.log("Complaints route - User role:", req.user?.role);
+      
       let complaints;
       if (req.user!.role === "citizen") {
         complaints = await storage.getComplaintsByUser(req.user!.id);
       } else {
         complaints = await storage.getAllComplaints();
       }
+      
+      console.log("Complaints route - Returning complaints:", complaints.length);
       res.json(complaints);
     } catch (error) {
+      console.error("Complaints route error:", error);
       res.status(500).json({ message: "Failed to fetch complaints" });
     }
   });
@@ -108,18 +127,29 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/complaints/:id/feedback", authenticateJWT, async (req, res) => {
-    if (req.user!.role !== "citizen") return res.sendStatus(403);
+    console.log("Feedback submission route called - User:", req.user);
+    console.log("Feedback submission route - Complaint ID:", req.params.id);
+    console.log("Feedback submission route - Request body:", req.body);
+    
+    if (req.user!.role !== "citizen") {
+      console.log("Feedback submission route - Access denied, user role:", req.user!.role);
+      return res.sendStatus(403);
+    }
     try {
       const validatedData = insertFeedbackSchema.parse({
         ...req.body,
         complaintId: req.params.id,
       });
+      console.log("Feedback submission route - Validated data:", validatedData);
+      
       const feedback = await storage.createFeedback({
         ...validatedData,
         citizenId: req.user!.id,
       });
+      console.log("Feedback submission route - Created feedback:", feedback);
       res.status(201).json(feedback);
     } catch (error) {
+      console.error("Feedback submission route error:", error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid feedback data", errors: error.errors });
       } else {
@@ -141,11 +171,16 @@ export function registerRoutes(app: Express): Server {
 
   // Analytics routes
   app.get("/api/analytics/stats", authenticateJWT, async (req, res) => {
+    console.log("Analytics route called - User:", req.user);
+    console.log("Analytics route - User role:", req.user?.role);
+    
     if (req.user!.role !== "official" && req.user!.role !== "admin") return res.sendStatus(403);
     try {
       const stats = await storage.getComplaintStats();
+      console.log("Analytics route - Returning stats:", stats);
       res.json(stats);
     } catch (error) {
+      console.error("Analytics route error:", error);
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
@@ -315,7 +350,7 @@ export function registerRoutes(app: Express): Server {
   // Notification routes
   app.get("/api/notifications", authenticateJWT, async (req, res) => {
     try {
-      const notifications = await storage.getNotifications(req.user.id);
+      const notifications = await storage.getNotifications(req.user!.id);
       res.json(notifications);
     } catch (error) {
       res.status(500).json({ error: "Failed to get notifications" });

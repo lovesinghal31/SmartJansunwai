@@ -381,12 +381,19 @@ export default function FeaturesPage() {
 
                       {/* Action Button */}
                       {feature.route ? (
-                        <Link href={feature.route}>
-                          <Button className="w-full">
-                            Try Feature
-                            <ArrowRight size={16} className="ml-2" />
+                        feature.category === "official" && (!user || user.role !== "official") ? (
+                          <Button className="w-full" variant="outline" disabled title="Officials only">
+                            <Shield size={16} className="mr-2" />
+                            Officials Only
                           </Button>
-                        </Link>
+                        ) : (
+                          <Link href={feature.route}>
+                            <Button className="w-full">
+                              Try Feature
+                              <ArrowRight size={16} className="ml-2" />
+                            </Button>
+                          </Link>
+                        )
                       ) : (
                         <Button variant="outline" className="w-full" disabled>
                           <Lightbulb size={16} className="mr-2" />
