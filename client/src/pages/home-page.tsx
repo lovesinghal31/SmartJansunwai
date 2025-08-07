@@ -49,7 +49,7 @@ export default function HomePage() {
       icon: MapPin,
       title: "Interactive Complaint Map",
       description: "Visualize complaints geographically with real-time plotting and heatmap analysis.",
-      color: "bg-green-100 text-green-600"
+      color: "bg-green-100 text-green-600",
     },
     {
       icon: MessageSquare,
