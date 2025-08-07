@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -154,7 +154,7 @@ export default function Header() {
 
   return (
     <header className="bg-white shadow-sm border-b">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-0">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex-grow-0">
@@ -164,15 +164,16 @@ export default function Header() {
                   <img
                     src={Logo}
                     alt="Samadhan+"
-                    className="h-20 w-20 object-contain rounded"
+                    className="h-12 w-12 object-contain rounded"
                   />
-                  <span className="text-xl font-bold text-gray-900">
+                  <span className="text-2xl font-bold text-gray-900 leading-none">
                     SAMADHAN+
                   </span>
                 </div>
               </Link>
             </div>
           </div>
+</div>
 
           {/* Navigation */}
           <nav className="hidden md:flex space-x-8">
@@ -188,7 +189,7 @@ export default function Header() {
                 <Link key={item.name} to={item.href}>
                   <div
                     className={`flex items-center space-x-2 px-4 py-3 rounded-md text-base font-medium transition-colors ${
-                      location.pathname === item.href
+                      location[0] === item.href
                         ? "text-primary-600 bg-primary-50"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
@@ -202,7 +203,7 @@ export default function Header() {
           </nav>
 
           {/* User Menu */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 mr-2">
             {user ? (
               <>
                 {/* Notification Button */}
