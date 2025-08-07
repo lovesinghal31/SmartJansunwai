@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
