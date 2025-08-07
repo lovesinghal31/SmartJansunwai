@@ -172,7 +172,7 @@ export default function Header() {
                 </div>
               </Link>
           </div>
-
+</div>
 
           {/* Navigation */}
           <nav className="hidden md:flex space-x-8">
