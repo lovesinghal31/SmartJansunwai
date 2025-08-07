@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import {
 
 export default function FeaturesPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState("all");
 
   const featureCategories = [
@@ -255,16 +257,28 @@ export default function FeaturesPage() {
     ? allFeatures 
     : allFeatures.filter(feature => feature.category === selectedCategory);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "available":
-        return <Badge className="bg-green-100 text-green-800">Available</Badge>;
-      case "beta":
-        return <Badge className="bg-yellow-100 text-yellow-800">Beta</Badge>;
-      case "coming-soon":
-        return <Badge className="bg-blue-100 text-blue-800">Coming Soon</Badge>;
-      default:
-        return <Badge className="bg-gray-100 text-gray-800">Unknown</Badge>;
+  const handleFeatureClick = (feature: any) => {
+    console.log("Feature clicked:", feature.title, "Route:", feature.route);
+    if (feature.route) {
+      // Route to the specific feature
+      console.log("Navigating to:", feature.route);
+      window.location.href = feature.route;
+    } else {
+      // Show "coming soon" popup
+      console.log("Showing coming soon message for:", feature.title);
+      toast({
+        title: "Feature Coming Soon",
+        description: `${feature.title} is currently being developed and will be available soon!`,
+        variant: "default"
+      });
+    }
+  };
+
+  const getStatusBadge = (status: string, hasRoute: boolean) => {
+    if (hasRoute) {
+      return <Badge className="bg-green-100 text-green-800">Available</Badge>;
+    } else {
+      return <Badge className="bg-blue-100 text-blue-800">Coming Soon</Badge>;
     }
   };
 
@@ -334,7 +348,11 @@ export default function FeaturesPage() {
             <TabsContent key={category.id} value={category.id}>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredFeatures.map((feature) => (
-                  <Card key={feature.id} className={`hover:shadow-lg transition-all duration-300 bg-gradient-to-br ${feature.color}`}>
+                  <Card 
+                    key={feature.id} 
+                    className={`hover:shadow-lg transition-all duration-300 bg-gradient-to-br ${feature.color} cursor-pointer`}
+                    onClick={() => handleFeatureClick(feature)}
+                  >
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex items-start space-x-3">
@@ -343,7 +361,7 @@ export default function FeaturesPage() {
                           </div>
                           <div>
                             <CardTitle className="text-lg text-gray-900">{feature.title}</CardTitle>
-                            {getStatusBadge(feature.status)}
+                            {getStatusBadge(feature.status, !!feature.route)}
                           </div>
                         </div>
                       </div>
@@ -380,24 +398,31 @@ export default function FeaturesPage() {
                       </div>
 
                       {/* Action Button */}
-                      {feature.route ? (
-                        feature.category === "official" && (!user || user.role !== "official") ? (
-                          <Button className="w-full" variant="outline" disabled title="Officials only">
-                            <Shield size={16} className="mr-2" />
-                            Officials Only
-                          </Button>
-                        ) : (
-                          <Link href={feature.route}>
-                            <Button className="w-full">
+                      {feature.category === "official" && (!user || user.role !== "official") ? (
+                        <Button className="w-full" variant="outline" disabled title="Officials only">
+                          <Shield size={16} className="mr-2" />
+                          Officials Only
+                        </Button>
+                      ) : (
+                        <Button 
+                          className="w-full" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFeatureClick(feature);
+                          }}
+                          variant={feature.route ? "default" : "outline"}
+                        >
+                          {feature.route ? (
+                            <>
                               Try Feature
                               <ArrowRight size={16} className="ml-2" />
-                            </Button>
-                          </Link>
-                        )
-                      ) : (
-                        <Button variant="outline" className="w-full" disabled>
-                          <Lightbulb size={16} className="mr-2" />
-                          Integrated Feature
+                            </>
+                          ) : (
+                            <>
+                              <Lightbulb size={16} className="mr-2" />
+                              Coming Soon
+                            </>
+                          )}
                         </Button>
                       )}
                     </CardContent>
@@ -427,7 +452,11 @@ export default function FeaturesPage() {
                 </thead>
                 <tbody>
                   {allFeatures.slice(0, 8).map((feature) => (
-                    <tr key={feature.id} className="border-b hover:bg-gray-50">
+                    <tr 
+                      key={feature.id} 
+                      className="border-b hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleFeatureClick(feature)}
+                    >
                       <td className="p-3">
                         <div className="flex items-center space-x-3">
                           <feature.icon size={16} className="text-gray-600" />
@@ -444,7 +473,7 @@ export default function FeaturesPage() {
                         <CheckCircle className="text-green-500 mx-auto" size={16} />
                       </td>
                       <td className="p-3 text-right">
-                        {getStatusBadge(feature.status)}
+                        {getStatusBadge(feature.status, !!feature.route)}
                       </td>
                     </tr>
                   ))}
