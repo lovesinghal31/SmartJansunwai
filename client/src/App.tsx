@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -17,21 +17,23 @@ import FeaturesPage from "@/pages/features-page";
 import FeedbackPage from "@/pages/feedback-page";
 import NotFound from "@/pages/not-found";
 
-function Router() {
+function AppRouter() {
   return (
-    <Switch>
-      <ProtectedRoute path="/" component={HomePage} />
-      <ProtectedRoute path="/citizen-dashboard" component={CitizenDashboard} />
-      <ProtectedRoute path="/official-dashboard" component={OfficialDashboard} />
-      <ProtectedRoute path="/admin-dashboard" component={AdminDashboard} />
-      <ProtectedRoute path="/chatbot" component={ChatbotPage} />
-      <ProtectedRoute path="/complaint-map" component={ComplaintMapPage} />
-      <ProtectedRoute path="/analytics" component={AnalyticsPage} />
-      <ProtectedRoute path="/feedback" component={FeedbackPage} />
-      <Route path="/features" component={FeaturesPage} />
-      <Route path="/auth" component={AuthPage} />
-      <Route component={NotFound} />
-    </Switch>
+    <Router>
+      <Routes>
+        <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+        <Route path="/citizen-dashboard" element={<ProtectedRoute><CitizenDashboard /></ProtectedRoute>} />
+        <Route path="/official-dashboard" element={<ProtectedRoute><OfficialDashboard /></ProtectedRoute>} />
+        <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/chatbot" element={<ProtectedRoute><ChatbotPage /></ProtectedRoute>} />
+        <Route path="/complaint-map" element={<ProtectedRoute><ComplaintMapPage /></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+        <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
+        <Route path="/features" element={<FeaturesPage />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
   );
 }
 
@@ -41,7 +43,7 @@ function App() {
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <AppRouter />
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
