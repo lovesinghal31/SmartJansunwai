@@ -19,7 +19,7 @@ import NotFound from "@/pages/not-found";
 
 function AppRouter() {
   return (
-    <Router>
+    <Router> 
       <Routes>
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
         <Route path="/citizen-dashboard" element={<ProtectedRoute><CitizenDashboard /></ProtectedRoute>} />

@@ -6,26 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Bot,
-  Send,
-  Mic,
-  User,
-  MessageCircle,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  HelpCircle,
-  Lightbulb,
-  FileText,
-  Globe
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  Bot, Send, Mic, User, MessageCircle, Clock, CheckCircle,
+  AlertCircle, HelpCircle, Lightbulb, FileText, Globe, History
 } from "lucide-react";
 
 // Firebase Imports for Database
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc, query, onSnapshot, orderBy } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 
 // --- Multi-language Support Setup ---
 const translations = {
@@ -44,7 +34,7 @@ const translations = {
   },
   hi: {
     smartAssistant: "स्मार्ट सहायक",
-    tagline: "शिकایات, नागरिक प्रक्रियाओं आदि के लिए तुरंत सहायता प्राप्त करें। हिंदी और अंग्रेजी में 24/7 उपलब्ध।",
+    tagline: "शिकायतों, नागरिक प्रक्रियाओं आदि के लिए तुरंत सहायता प्राप्त करें। हिंदी और अंग्रेजी में 24/7 उपलब्ध।",
     aiAssistant: "एआई सहायक",
     online: "ऑनलाइन",
     hindi: "हिंदी",
@@ -58,7 +48,7 @@ const translations = {
 };
 
 interface ChatMessage {
-  id?: string;
+  id?: string; // Firestore will generate this
   type: 'user' | 'bot';
   message: string;
   timestamp: Date;
@@ -77,6 +67,7 @@ const firebaseConfig = {
 };
 
 declare const __app_id: any;
+declare const __initial_auth_token: any;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 const app = initializeApp(firebaseConfig);
@@ -84,13 +75,13 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 export default function ChatbotPage() {
-  const { user } = useAuth();
-  const userId = user?.id;
-
+  const [userId, setUserId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
+  
+  // --- FIX: Added the missing useRef definition ---
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const t = (key: keyof typeof translations.en) => translations[language][key] || translations.en[key];
@@ -110,10 +101,33 @@ export default function ChatbotPage() {
     { title: "Department Directory", description: "Find the right department for your specific issue", icon: HelpCircle, color: "bg-purple-100 text-purple-800" },
     { title: "Emergency Procedures", description: "What to do for urgent civic issues requiring immediate attention", icon: AlertCircle, color: "bg-red-100 text-red-800" }
   ];
+
+  useEffect(() => {
+    const authUnsubscribe = onAuthStateChanged(auth, async (user) => {
+      let currentUserId;
+      if (user) {
+        currentUserId = user.uid;
+      } else {
+        const anonymousUser = await signInAnonymously(auth);
+        currentUserId = anonymousUser.user.uid;
+      }
+      setUserId(currentUserId);
+    });
+
+    if (typeof __initial_auth_token !== 'undefined' && auth.currentUser === null) {
+      signInWithCustomToken(auth, __initial_auth_token).catch(error => {
+        console.error("Custom token sign-in failed:", error);
+        signInAnonymously(auth);
+      });
+    } else if (auth.currentUser === null) {
+      signInAnonymously(auth);
+    }
+    
+    return () => authUnsubscribe();
+  }, []);
   
   useEffect(() => {
     if (!userId) return;
-    console.log(`DEBUG: Setting up Firestore listener for userId: ${userId}`);
 
     const chatHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
     const q = query(chatHistoryCollection, orderBy("timestamp", "asc"));
@@ -142,7 +156,7 @@ export default function ChatbotPage() {
         setMessages(fetchedMessages);
       }
     }, (error) => {
-      console.error("DEBUG: Firestore snapshot error:", error);
+      console.error("Firestore snapshot error:", error);
     });
 
     return () => dataUnsubscribe();
@@ -173,29 +187,9 @@ export default function ChatbotPage() {
       return;
     }
     
-    // --- FIX: Enhanced system prompt with specific context about the website ---
-    const systemPrompt = `You are the "Smart Jansunwai" AI Assistant for the city of Indore. Your purpose is to help users of this specific website.
-    Key features of the website you should know about:
-    - Complaint Filing: Users can submit complaints about civic issues.
-    - Status Tracking: Users can track the status of their submitted complaints.
-    - Interactive Map: A map view shows the location of various complaints.
-    - Department Directory: Information on municipal departments.
-    Your role is to answer questions strictly related to these features and other civic issues in Indore. If a user asks a question outside of this domain (e.g., about movies, celebrities, general knowledge), you must politely decline to answer and guide them back to relevant topics.
-    Answer the following user query in ${language === 'hi' ? 'Hindi' : 'English'}.`;
+    const systemPrompt = `You are the Jansunwai AI Assistant for the city of Indore. Your role is to answer questions strictly related to civic issues, public complaints, government processes, and municipal services for Indore. If a user asks a question outside of this domain (e.g., about movies, celebrities, general knowledge, or personal opinions), you must politely decline to answer and guide them back to relevant topics. Answer the following user query in ${language === 'hi' ? 'Hindi' : 'English'}: "${userInput}"`;
 
-    // --- FIX: Include previous messages for conversational context ---
-    const conversationHistory = messages.slice(-6).map(msg => ({
-      role: msg.type === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.message }]
-    }));
-
-    const payload = { 
-      contents: [
-        ...conversationHistory,
-        { role: "user", parts: [{ text: systemPrompt + `\n\nUser Question: "${userInput}"` }] }
-      ]
-    };
-
+    const payload = { contents: [{ role: "user", parts: [{ text: systemPrompt }] }] };
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
     try {
@@ -225,7 +219,7 @@ export default function ChatbotPage() {
       }
 
     } catch (error) {
-      console.error("DEBUG: Error fetching AI response:", error);
+      console.error("Error fetching AI response:", error);
       const errorMessage: ChatMessage = {
         type: 'bot',
         message: "There was an error connecting to the AI service. Please try again later.",
@@ -269,7 +263,7 @@ export default function ChatbotPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-4">
@@ -281,11 +275,9 @@ export default function ChatbotPage() {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">{t('tagline')}</p>
         </div>
 
-        {/* This is the key change: use flexbox for column layout on large screens */}
-        <div className="grid lg:grid-cols-4 gap-8 items-stretch">
-          {/* Chat Interface - Stretches to match height */}
-          <div className="lg:col-span-3 flex">
-            <Card className="flex-1 flex flex-col">
+        <div className="grid lg:grid-cols-4 gap-8">
+          <div className="lg:col-span-3 space-y-6">
+            <Card className="h-[650px] flex flex-col">
               <CardHeader className="border-b">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center space-x-2">
@@ -299,25 +291,20 @@ export default function ChatbotPage() {
                   </Button>
                 </div>
               </CardHeader>
-
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {messages.map((message) => (
-                  <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-xs lg:max-w-md flex space-x-3 ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                        message.type === 'user' ? 'bg-primary-600' : 'bg-gray-200'
-                      }`}>
-                        {message.type === 'user' ? (
-                          <User className="text-white" size={16} />
-                        ) : (
+              
+              <ScrollArea className="flex-1" ref={scrollAreaRef}>
+                <div className="p-6 space-y-6">
+                  {messages.map((message, index) => (
+                    <div key={message.id || index} className={`flex items-start gap-4 ${message.type === 'user' ? 'justify-end' : ''}`}>
+                      {message.type === 'bot' && (
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
                           <Bot className="text-gray-600" size={16} />
-                        )}
-                      </div>
-                      <div className={`rounded-lg p-3 ${
-                        message.type === 'user'
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 text-gray-900'
+                        </div>
+                      )}
+                      <div className={`max-w-md rounded-lg p-3 ${
+                        message.type === 'user' 
+                          ? 'bg-blue-100 text-black rounded-br-none' 
+                          : 'bg-gray-100 text-gray-900 rounded-bl-none'
                       }`}>
                         <p className="text-sm whitespace-pre-wrap">{message.message}</p>
                         <p className="text-xs mt-2 opacity-70 text-right">
@@ -337,14 +324,17 @@ export default function ChatbotPage() {
                           </div>
                         )}
                       </div>
+                       {message.type === 'user' && (
+                        <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
+                          <User className="text-white" size={16} />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
-
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="flex space-x-3">
-                      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                  ))}
+                  
+                  {isTyping && (
+                    <div className="flex items-start gap-4">
+                      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                         <Bot className="text-gray-600" size={16} />
                       </div>
                       <div className="bg-gray-100 rounded-lg p-3 rounded-bl-none">
@@ -355,45 +345,31 @@ export default function ChatbotPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Input */}
-              <div className="border-t p-4">
-                <div className="flex space-x-2">
-                  <div className="flex-1 relative">
-                    <Input
-                      value={currentMessage}
-                      onChange={(e) => setCurrentMessage(e.target.value)}
-                      placeholder="Type your question here..."
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      className="pr-12"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={startVoiceInput}
-                      className={`absolute right-2 top-1/2 transform -translate-y-1/2 ${isListening ? 'text-red-500' : 'text-gray-400'}`}
-                    >
-                      <Mic size={16} />
-                    </Button>
-                  </div>
-                  <Button onClick={handleSendMessage} disabled={!currentMessage.trim()}>
-                    <Send size={16} />
+                  )}
+                </div>
+              </ScrollArea>
+              
+              <div className="border-t p-4 bg-white">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={currentMessage}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    placeholder={t('typeQuestion')}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    className="flex-1"
+                  />
+                  <Button variant="ghost" size="icon">
+                    <Mic />
+                  </Button>
+                  <Button onClick={handleSendMessage} disabled={!currentMessage.trim() || isTyping}>
+                    <Send />
                   </Button>
                 </div>
               </div>
             </Card>
-          </div>
-
-          {/* Sidebar content - Stretches to match height */}
-          <div className="lg:col-span-1 flex flex-col space-y-6">
-            {/* Quick Questions - The height of this card now determines the total height */}
-            <Card className="flex-1">
-              <CardHeader>
-                <CardTitle className="text-lg">Common Questions</CardTitle>
-              </CardHeader>
+            
+            <Card>
+              <CardHeader><CardTitle className="text-lg">{t('commonQuestions')}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {commonQuestions.map((item, index) => (
                   <button
@@ -409,6 +385,45 @@ export default function ChatbotPage() {
                       </div>
                     </div>
                   </button>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="lg:col-span-1 space-y-6">
+            <Card>
+              <CardHeader><CardTitle className="text-lg">{t('pastQuestions')}</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {pastQuestions.length > 0 ? pastQuestions.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleSuggestionClick(item.message)}
+                    className="w-full text-left p-3 text-xs rounded-lg border hover:bg-gray-50 transition-colors truncate"
+                  >
+                    <div className="flex items-center gap-2">
+                      <History className="text-gray-400 flex-shrink-0" size={14} />
+                      <span>{item.message}</span>
+                    </div>
+                  </button>
+                )) : <p className="text-sm text-gray-500">Your recent questions will appear here.</p>}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="text-lg">{t('knowledgeBase')}</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {knowledgeBase.map((item, index) => (
+                  <div key={index} className="p-3 rounded-lg border">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.color}`}>
+                        <item.icon size={16} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{item.title}</p>
+                        <p className="text-xs text-gray-500 mt-1">{item.description}</p>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </CardContent>
             </Card>

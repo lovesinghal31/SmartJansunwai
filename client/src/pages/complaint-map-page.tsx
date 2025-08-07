@@ -106,7 +106,7 @@ export default function ComplaintMapPage() {
   const mapComplaints: MapComplaint[] = [
     {
       id: "1", citizenId: "user1", title: "Pothole on MG Road", description: "Large pothole causing traffic issues",
-      category: "road-transportation", location: "MG Road, near Palasia Square", priority: "high", status: "in-progress",
+      category: "road-transportation", location: "MG Road, near Palasia Square", priority: "high", status: "in-progress", // type: string
       assignedTo: undefined, attachments: undefined, createdAt: new Date("2024-01-15"), updatedAt: new Date("2024-01-16"),
       coordinates: { lat: 22.7196, lng: 75.8577 }, wardNumber: 12, landmark: "Palasia Square"
     },
@@ -165,6 +165,7 @@ export default function ComplaintMapPage() {
 
         <div className="grid lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1 space-y-6">
+            {/* --- FIX: Live Statistics Card RESTORED --- */}
             <Card>
               <CardHeader><CardTitle className="text-lg">Live Statistics</CardTitle></CardHeader>
               <CardContent>
@@ -248,6 +249,7 @@ export default function ComplaintMapPage() {
               </CardContent>
             </Card>
 
+            {/* --- FIX: Quick Actions Card RESTORED --- */}
             <Card>
               <CardHeader><CardTitle className="text-lg">Quick Actions</CardTitle></CardHeader>
               <CardContent className="space-y-2">
@@ -264,8 +266,7 @@ export default function ComplaintMapPage() {
             </Card>
           </div>
 
-          {/* --- FIX: The right column now contains the map AND the ward stats --- */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-3">
             <Card className="h-[700px] overflow-hidden">
               <CardHeader className="border-b">
                 <div className="flex items-center justify-between">
@@ -313,26 +314,25 @@ export default function ComplaintMapPage() {
                 )}
               </CardContent>
             </Card>
-
-            {/* --- FIX: Ward-wise stats card is now here, below the map --- */}
-            <Card>
-              <CardHeader><CardTitle>Ward-wise Complaint Distribution</CardTitle></CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {Object.entries(wardStats).map(([ward, count]) => (
-                    <div key={ward} className="text-center p-3 bg-gray-50 rounded-lg">
-                      <div className="text-lg font-bold text-gray-900">Ward {ward}</div>
-                      <div className="text-sm text-gray-600">{count as number} complaints</div>
-                      <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                        <div className="bg-primary-600 h-2 rounded-full" style={{ width: `${((count as number) / Math.max(...Object.values(wardStats))) * 100}%` }}></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
+
+        <Card className="mt-6">
+          <CardHeader><CardTitle>Ward-wise Complaint Distribution</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {Object.entries(wardStats).map(([ward, count]) => (
+                <div key={ward} className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-lg font-bold text-gray-900">Ward {ward}</div>
+                  <div className="text-sm text-gray-600">{count as number} complaints</div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div className="bg-primary-600 h-2 rounded-full" style={{ width: `${((count as number) / Math.max(...Object.values(wardStats))) * 100}%` }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Footer />
