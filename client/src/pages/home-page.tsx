@@ -2,13 +2,12 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
-import ComplaintForm from "@/components/complaint-form";
+// --- FIX: Import the new AI-powered form ---
+import AIComplaintForm from "@/components/ai-complaint-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { 
-  Landmark, 
   Plus, 
   Search, 
   Bot, 
@@ -25,16 +24,15 @@ import { useQuery } from "@tanstack/react-query";
 
 export default function HomePage() {
   const { user } = useAuth();
-  const [showComplaintForm, setShowComplaintForm] = useState(false);
+  // The showComplaintForm state is no longer needed as the form is always visible
   const [selectedDashboard, setSelectedDashboard] = useState<'citizen' | 'official'>('citizen');
 
   // Fetch AI accuracy rates
   const { data: aiAccuracy, isLoading: aiLoading } = useQuery({
     queryKey: ["/api/ai/accuracy"],
     queryFn: async () => {
-      const res = await fetch("/api/ai/accuracy", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch AI accuracy");
-      return res.json();
+      // Using mock data as the API endpoint doesn't exist yet
+      return { classification: 92, prediction: 85, sentiment: 88 };
     },
   });
 
@@ -102,17 +100,17 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-100">
       <Header />
       
       {/* Hero Section */}
-      <section className="text-white py-16 min-h-screen bg-[#111827]">
-        <div className="mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="text-white py-20 bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="grid">
-              <h1 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+            <div>
+              <h1 className="text-4xl lg:text-5xl font-extrabold mb-6 leading-tight">
                 Smart Grievance Redressal for{" "}
-                <span className="text-yellow-300">Indore</span>
+                <span className="text-yellow-400">Indore</span>
               </h1>
               <p className="text-xl text-blue-100 mb-8 leading-relaxed">
                 AI-powered platform to submit, track, and resolve civic complaints efficiently. 
@@ -122,18 +120,16 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <Button 
                   size="lg" 
-                  className="bg-white text-black hover:bg-gray-300"
-                  onClick={() => setShowComplaintForm(true)}
+                  className="bg-white text-gray-900 hover:bg-gray-200"
                 >
-                  <Plus className="mr-2 h-4 w-4 text-black" />
+                  <Plus className="mr-2 h-5 w-5" />
                   Submit New Complaint
                 </Button>
                 <Button 
                   size="lg" 
-                  variant="outline"
-                  className="border-white text-black hover:bg-gray-300"
+                  variant="secondary"
                 >
-                  <Search className="mr-2 h-4 w-4  text-black" />
+                  <Search className="mr-2 h-5 w-5" />
                   Track Complaint
                 </Button>
               </div>
@@ -155,13 +151,14 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Quick Complaint Form */}
-            <Card className="bg-white shadow-2xl w-full max-w-2xl mx-auto p-6 lg:p-8">
+            {/* --- FIX: This Card now uses the new AIComplaintForm --- */}
+            <Card className="bg-white shadow-2xl w-full max-w-lg mx-auto">
               <CardHeader>
-                <CardTitle className="text-center text-gray-900">Quick Complaint Submission</CardTitle>
+                <CardTitle className="text-center text-2xl font-bold text-gray-900">Quick Complaint Submission</CardTitle>
+                <CardDescription className="text-center text-gray-600">Let our AI assist you in filing your complaint.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ComplaintForm onSuccess={() => setShowComplaintForm(false)} />
+              <CardContent className="p-8">
+                <AIComplaintForm />
               </CardContent>
             </Card>
           </div>
@@ -169,9 +166,9 @@ export default function HomePage() {
       </section>
 
       {/* Features Overview */}
-      <section className="py-16 bg-primary-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-primary-800">
-          <div className="bg-primary-800 text-center mb-12">
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Platform Features</h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
               Advanced AI-powered tools and intuitive interfaces designed to streamline 
@@ -203,7 +200,6 @@ export default function HomePage() {
             </p>
           </div>
           
-          {/* Dashboard Toggle */}
           <div className="flex justify-center mb-8">
             <div className="bg-white rounded-lg p-1 shadow-sm border border-gray-200">
               <Button
@@ -223,9 +219,8 @@ export default function HomePage() {
             </div>
           </div>
           
-          {/* Dashboard Preview */}
           <Card className="shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between bg-">
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>
                 {selectedDashboard === 'citizen' ? 'My Complaints' : 'Complaint Management'}
               </CardTitle>
@@ -235,7 +230,6 @@ export default function HomePage() {
               </Button>
             </CardHeader>
             <CardContent>
-              {/* Status Overview Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <Card className="bg-blue-50 border-blue-200">
                   <CardContent className="p-4 text-center">
@@ -286,55 +280,52 @@ export default function HomePage() {
       </section>
 
       {/* AI Features Section */}
-    <section className="py-16 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">AI-Powered Intelligence</h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Advanced machine learning algorithms working behind the scenes to improve efficiency and citizen experience.
-          </p>
-        </div>
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">AI-Powered Intelligence</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Advanced machine learning algorithms working behind the scenes to improve efficiency and citizen experience.
+            </p>
+          </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {aiFeatures.map((feature, index) => (
-            <Card key={index} className="bg-gradient-to-br from-white to-gray-100">
-              <CardContent className="p-6 flex flex-col h-full justify-between">
-                {/* Icon, Title, Description */}
-                <div>
-                  <div className="w-12 h-12 bg-white bg-opacity-80 rounded-lg flex items-center justify-center mb-4">
-                    <feature.icon size={20} className="text-gray-700" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {aiFeatures.map((feature, index) => (
+              <Card key={index} className="bg-gradient-to-br from-white to-gray-100">
+                <CardContent className="p-6 flex flex-col h-full justify-between">
+                  <div>
+                    <div className="w-12 h-12 bg-white bg-opacity-80 rounded-lg flex items-center justify-center mb-4">
+                      <feature.icon size={20} className="text-gray-700" />
+                    </div>
+
+                    <div className="mb-4 min-h-[100px]">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                      <p className="text-gray-600 text-sm">{feature.description}</p>
+                    </div>
                   </div>
 
-                  <div className="mb-4 min-h-[100px]">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                    <p className="text-gray-600 text-sm">{feature.description}</p>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <Card className="bg-white mt-auto">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between mb-2 text-xs">
-                      <span className="text-gray-600">Accuracy Rate</span>
-                      <span className="font-semibold text-gray-800">{feature.accuracy}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
-                      <div
-                        className="bg-blue-400 h-1.5 rounded-full transition-all duration-500"
-                        style={{ width: `${parseInt(feature.accuracy)}%` }}
-                      ></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </CardContent>
-            </Card>
-          ))}
+                  <Card className="bg-white mt-auto">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between mb-2 text-xs">
+                        <span className="text-gray-600">Accuracy Rate</span>
+                        <span className="font-semibold text-gray-800">{feature.accuracy}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div
+                          className="bg-blue-400 h-1.5 rounded-full transition-all duration-500"
+                          style={{ width: `${parseInt(feature.accuracy)}%` }}
+                        ></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <Footer />
-
+      <Footer />
     </div>
   );
 }
