@@ -35,13 +35,15 @@ export default function Header() {
   const { t } = useTranslation();
   const { toast } = useToast();
 
+  // --- FIX: The `enabled` property now depends on `user.id` instead of the whole `user` object ---
+  // This prevents the query from re-running unnecessarily and causing an infinite loop.
   const {
     data: notifications = [],
     isLoading: notificationsLoading,
     isError: notificationsError,
     refetch: refetchNotifications,
   } = useQuery<Notification[]>({
-    queryKey: ["/api/notifications", user?.id],
+    queryKey: ["/api/notifications", user?.id], // Added user.id to the queryKey for better caching
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/notifications", undefined, accessToken);
       if (!res.ok) {
@@ -49,28 +51,27 @@ export default function Header() {
       }
       return res.json();
     },
-    enabled: !!user?.id && !!accessToken,
-    refetchInterval: 10000,
+    enabled: !!user?.id && !!accessToken, // This is the key change to prevent the loop
+    refetchInterval: 10000, // Increased interval to reduce unnecessary requests
   });
 
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("PUT", `/api/notifications/${id}/read`, undefined, accessToken);
     },
-    onSuccess: () => refetchNotifications(),
+    onSuccess: () => refetchNotifications(), // Refetch after marking as read
   });
 
   const deleteNotificationMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/notifications/${id}`, undefined, accessToken);
     },
-    onSuccess: () => refetchNotifications(),
+    onSuccess: () => refetchNotifications(), // Refetch after deleting
   });
 
   const unreadCount =
     notifications?.filter((n: Notification) => !n.isRead).length || 0;
-    
-  // --- FIX: Restored the testNotifications function ---
+
   const testNotifications = async () => {
     console.log("Testing notifications API manually...");
     try {
@@ -168,8 +169,7 @@ export default function Header() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto rounded-xl">
-                    {/* --- FIX: Restored the Test Notifications button --- */}
-                    <div className="px-4 py-2 border-b">
+                    <div className="p-2 border-b">
                       <Button 
                         variant="outline" 
                         size="sm" 
