@@ -108,6 +108,18 @@ export default function OfficialDashboard() {
                          complaint.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || complaint.status === statusFilter;
     const matchesCategory = categoryFilter === "all" || complaint.category === categoryFilter;
+    
+    // Debug logging
+    console.log(`Complaint "${complaint.title}":`, {
+      status: complaint.status,
+      category: complaint.category,
+      matchesSearch,
+      matchesStatus,
+      matchesCategory,
+      statusFilter,
+      categoryFilter
+    });
+    
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
@@ -174,10 +186,10 @@ export default function OfficialDashboard() {
   };
 
   const complaintsByStatus = {
-    submitted: filteredComplaints.filter(c => c.status === "submitted"),
-    "in-progress": filteredComplaints.filter(c => c.status === "in-progress"),
-    "under-review": filteredComplaints.filter(c => c.status === "under-review"),
-    resolved: filteredComplaints.filter(c => c.status === "resolved"),
+  submitted: complaints.filter(c => c.status === "submitted"),
+  "in-progress": complaints.filter(c => c.status === "in-progress"),
+  "under-review": complaints.filter(c => c.status === "under-review"),
+  resolved: complaints.filter(c => c.status === "resolved"),
   };
 
   return (
