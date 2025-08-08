@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSocket } from "@/hooks/useSocket";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,12 +15,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Filter } from "lucide-react";
-import type { Complaint } from "@shared/schema";
+import type { Complaint, Notification } from "@shared/schema";
 
 export default function CitizenDashboard() {
   const { user, accessToken } = useAuth();
   const { toast } = useToast();
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const lastNotificationId = useRef<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -34,41 +35,20 @@ export default function CitizenDashboard() {
     enabled: !!user && !!accessToken,
   });
 
-  // Poll notifications every 4 seconds
-  useEffect(() => {
-    if (!user || !accessToken) return;
-    let interval: NodeJS.Timeout;
-    const fetchNotifications = async () => {
-      try {
-        console.log("Citizen Dashboard: Fetching notifications...");
-        const res = await apiRequest("GET", "/api/notifications", undefined, accessToken);
-        if (!res.ok) {
-          console.error("Citizen Dashboard: Failed to fetch notifications");
-          return;
-        }
-        const data = await res.json();
-        console.log("Citizen Dashboard: Notifications data:", data);
-        setNotifications(data);
-        if (data.length > 0) {
-          const latest = data[0];
-          if (lastNotificationId.current !== latest.id) {
-            // Show toast for new notification
-            toast({
-              title: latest.title || "New Notification",
-              description: latest.message,
-              variant: latest.type === "error" ? "destructive" : "default",
-            });
-            lastNotificationId.current = latest.id;
-          }
-        }
-      } catch (e) {
-        console.error("Citizen Dashboard: Error fetching notifications:", e);
-      }
-    };
-    fetchNotifications();
-    interval = setInterval(fetchNotifications, 4000);
-    return () => clearInterval(interval);
-  }, [user, accessToken, toast]);
+  // Real-time notifications using Socket.IO
+  const handleNotification = useCallback((notification: any) => {
+    setNotifications((prev) => [notification, ...prev]);
+    if (lastNotificationId.current !== notification.id) {
+      toast({
+        title: notification.title || "New Notification",
+        description: notification.message,
+        variant: notification.type === "error" ? "destructive" : "default",
+      });
+      lastNotificationId.current = notification.id;
+    }
+  }, [toast]);
+
+  useSocket(user?.id || "", handleNotification);
 
   const filteredComplaints = complaints.filter(complaint => {
     const matchesSearch = complaint.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
