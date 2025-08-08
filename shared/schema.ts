@@ -128,6 +128,9 @@ export const insertUserSchema = z.object({
 });
 
 export const insertComplaintSchema = z.object({
+  name: z.string().min(3, "Name is required"),
+  contact: z.string().min(10, "A valid contact number is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   title: z.string().min(1),
   description: z.string().min(1),
   category: z.enum(CATEGORIES as unknown as [string, ...string[]]),
@@ -135,6 +138,12 @@ export const insertComplaintSchema = z.object({
   priority: z.string().default("medium"),
   status: z.enum(["submitted", "in-progress", "under-review", "resolved"]).default("submitted"),
   attachments: z.array(z.string()).optional(),
+  aiAnalysis: z.object({
+    priority: z.string().optional(),
+    isComplaintValid: z.boolean().optional(),
+    suggestedCategory: z.string().optional(),
+    estimatedResolutionDays: z.number().optional(),
+  }).optional(),
 });
 
 export const insertComplaintUpdateSchema = z.object({

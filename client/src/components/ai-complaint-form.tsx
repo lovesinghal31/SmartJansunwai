@@ -139,8 +139,20 @@ export default function AIComplaintForm() {
       toast({ title: "Password Required", description: "Please create a password to secure your complaint.", variant: "destructive" });
       return;
     }
+    // Map display category to backend enum value
+    const categoryMap: Record<string, string> = {
+      "Roads & Transportation": "road-transportation",
+      "Water Supply": "water-supply",
+      "Electricity": "electricity",
+      "Sanitation": "sanitation",
+      "Street Lighting": "street-lighting",
+      "Parks & Recreation": "parks-recreation",
+    };
+    const values = getValues();
+    const backendCategory = categoryMap[values.category] || values.category.toLowerCase().replace(/ /g, '-');
     const finalData = {
-      ...getValues(),
+      ...values,
+      category: backendCategory,
       priority: aiResult?.priority.toLowerCase() || 'medium',
       password: password,
     };
