@@ -1,4 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
+// Use default import for CommonJS compatibility (requires allowSyntheticDefaultImports in tsconfig)
+import socket from "./socket";
+const { initSocket } = socket;
 import '../server/loadEnv';
 import { connectMongoose } from './mongoose';
 import { registerRoutes } from "./routes";
@@ -44,6 +47,8 @@ app.use((req, res, next) => {
 (async () => {
   await connectMongoose();
   const server = await registerRoutes(app);
+  // Initialize Socket.IO for real-time notifications
+  initSocket(server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
