@@ -100,7 +100,9 @@ export default function ComplaintCard({ complaint }: ComplaintCardProps) {
               <div className="flex items-center space-x-3 mb-2">
                 <span className="font-medium text-gray-900">{complaint.id.slice(0, 8)}</span>
                 <Badge className={getStatusColor(complaint.status)}>
-                  {complaint.status.charAt(0).toUpperCase() + complaint.status.slice(1).replace('-', ' ')}
+                  {complaint.status
+                    ? complaint.status.charAt(0).toUpperCase() + complaint.status.slice(1).replace('-', ' ')
+                    : 'Unknown'}
                 </Badge>
                 <Badge className={getPriorityColor(complaint.priority)}>
                   {complaint.priority}
