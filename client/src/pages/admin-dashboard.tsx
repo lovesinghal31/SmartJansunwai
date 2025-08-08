@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
+import { CATEGORIES } from "@shared/schema";
 
 // Form schemas
 const departmentFormSchema = z.object({
@@ -1147,17 +1148,19 @@ export default function AdminDashboard() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Department (For Officials)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select department" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
-                        {departments.map((dept: any) => (
-                          <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                        ))}
+                         <SelectItem value="">None</SelectItem>
+                         {Array.from(CATEGORIES).map((slug) => (
+                           <SelectItem key={slug} value={slug}>
+                             {slug.replace(/-/g, " ")}
+                           </SelectItem>
+                         ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

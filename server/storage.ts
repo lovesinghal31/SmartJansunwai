@@ -208,9 +208,7 @@ export class MongoStorage implements IStorage {
     const newComplaint: Complaint = {
       id: randomUUID(),
       ...complaint,
-      status: 'submitted',
-      priority: complaint.priority || 'medium',
-      attachments: complaint.attachments || [],
+      status: complaint.status || 'submitted',
       createdAt: now,
       updatedAt: now,
     };

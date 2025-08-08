@@ -20,11 +20,10 @@ export interface Complaint {
   citizenId: string;
   title: string;
   description: string;
-  category: string;
+  category: string; // canonical slug, e.g. "water-supply"
   location: string;
   priority: string; // low, medium, high
   status: string; // submitted, in-progress, under-review, resolved
-  assignedTo?: string;
   attachments?: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -108,6 +107,17 @@ export interface AuditLog {
 }
 
 // Zod Insert Schemas
+// Canonical complaint category slugs used ACROSS the system (UI, API, DB)
+export const CATEGORIES = [
+  "road-transportation",
+  "water-supply",
+  "electricity",
+  "sanitation",
+  "street-lighting",
+  "parks-recreation",
+] as const;
+
+export type Category = typeof CATEGORIES[number];
 export const insertUserSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(6),
@@ -120,9 +130,10 @@ export const insertUserSchema = z.object({
 export const insertComplaintSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
-  category: z.string().min(1),
+  category: z.enum(CATEGORIES as unknown as [string, ...string[]]),
   location: z.string().min(1),
   priority: z.string().default("medium"),
+  status: z.enum(["submitted", "in-progress", "under-review", "resolved"]).default("submitted"),
   attachments: z.array(z.string()).optional(),
 });
 
