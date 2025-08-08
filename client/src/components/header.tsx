@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Header() {
   const { user, logoutMutation, accessToken } = useAuth();
-  const [location] = useLocation(); // Wouter's useLocation returns an array
+  const location = useLocation(); // react-router-dom's useLocation returns an object
   const { t } = useTranslation();
   const { toast } = useToast();
 
@@ -138,7 +138,7 @@ export default function Header() {
                 <Link key={item.name} to={item.href}>
                   <div
                     className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      location === item.href
+                      location.pathname === item.href
                         ? "text-primary-600 bg-primary-50"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
