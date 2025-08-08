@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import LanguageSwitcher from "./language-switcher";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useSocket } from "@/hooks/useSocket";
 import { apiRequest } from "@/lib/queryClient";
 import { Notification } from "../../../shared/schema";
 import Logo from "./logo.png"; // Adjust the path as necessary

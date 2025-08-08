@@ -381,6 +381,15 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: result.error.issues });
       }
       const notification = await storage.createNotification(result.data);
+      // Emit real-time notification to user
+      try {
+        // require("./socket").sendNotificationToUser(result.data.userId, notification);
+        import("./socket").then((socketModule) => {
+  socketModule.default.sendNotificationToUser(result.data.userId, notification);
+})
+      } catch (e) {
+        console.error("Socket notification emit error:", e);
+      }
       res.status(201).json(notification);
     } catch (error) {
       res.status(500).json({ error: "Failed to create notification" });
