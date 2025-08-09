@@ -3,16 +3,16 @@ import { useForm, SubmitHandler, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Brain, Check, Edit, Loader2, Plus, ShieldCheck, KeyRound, LocateFixed, Badge } from "lucide-react";
+import { Brain, Check, Edit, Loader2, Plus, ShieldCheck, KeyRound, LocateFixed, Badge, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 // Define the structure for the form data
 const complaintSchema = z.object({
@@ -26,23 +26,31 @@ const complaintSchema = z.object({
 
 type ComplaintFormData = z.infer<typeof complaintSchema>;
 
-// Define the structure for the AI's analysis result
+// AI analysis result structure
 interface AIAnalysisResult {
   priority: "Low" | "Medium" | "High";
   isComplaintValid: boolean;
+  reasoning: string; 
   suggestedCategory: string;
   estimatedResolutionDays: number;
 }
 
-export default function AIComplaintForm() {
-  const [formStep, setFormStep] = useState<'initial' | 'preview' | 'submitted' | 'editing'>('initial');
+const getPriorityBadgeClass = (priority: "Low" | "Medium" | "High") => {
+  switch (priority) {
+    case "High": return "bg-red-500 hover:bg-red-600 text-white";
+    case "Medium": return "bg-yellow-500 hover:bg-yellow-600 text-white";
+    case "Low": default: return "bg-blue-500 hover:bg-blue-600 text-white";
+  }
+};
+
+// This component now takes a function to handle navigation
+export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTrack: () => void }) {
+  const [formStep, setFormStep] = useState<'initial' | 'preview' | 'submitted'>('initial');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isLocationLoading, setIsLocationLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
   const [complaintId, setComplaintId] = useState<string>("");
   const [password, setPassword] = useState("");
-  const [editId, setEditId] = useState("");
-  const [editPassword, setEditPassword] = useState("");
   const { toast } = useToast();
   const { accessToken } = useAuth();
   const queryClient = useQueryClient();
@@ -51,16 +59,13 @@ export default function AIComplaintForm() {
     resolver: zodResolver(complaintSchema),
   });
 
+  const navigate = useNavigate();
   const formData = watch();
 
-  // --- Backend Mutation for Creating a Complaint ---
   const createComplaintMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/complaints", data, accessToken);
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: "An unknown error occurred" }));
-        throw new Error(errorData.message || `Request failed with status ${res.status}`);
-      }
+      if (!res.ok) throw new Error("Request failed");
       return res.json();
     },
     onSuccess: (data) => {
@@ -69,12 +74,9 @@ export default function AIComplaintForm() {
       setComplaintId(data.id);
       setFormStep('submitted');
     },
-    onError: (error: Error) => {
-      toast({ title: "Submission Failed", description: error.message, variant: "destructive" });
-    },
+    onError: (error: Error) => toast({ title: "Submission Failed", description: error.message, variant: "destructive" }),
   });
 
-  // --- AI ANALYSIS FUNCTION ---
   const handleAnalyzeComplaint: SubmitHandler<ComplaintFormData> = async (data) => {
     setIsAiLoading(true);
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -84,18 +86,7 @@ export default function AIComplaintForm() {
       return;
     }
 
-    const prompt = `Analyze the following civic complaint. Based on the title and description, determine if it is a valid, genuine complaint or just random characters/gibberish. Also determine the correct category, priority, and estimated resolution time.
-      User's chosen category: "${data.category}"
-      Complaint Title: "${data.title}"
-      Complaint Description: "${data.description}"
-      
-      Respond ONLY with a valid JSON object with the following structure:
-      {
-        "priority": "Low" | "Medium" | "High",
-        "isComplaintValid": boolean,
-        "suggestedCategory": "Water Supply" | "Roads & Transportation" | "Electricity" | "Sanitation" | "Street Lighting" | "Parks & Recreation",
-        "estimatedResolutionDays": integer between 1 and 14
-      }`;
+    const prompt = `Act as a strict civic complaint validator for a system in India. Analyze the following complaint. **Rules:** 1. **Location Check:** The location must be a plausible, real place within India. Reject locations from other countries (e.g., Pakistan) or nonsensical places. 2. **Content Analysis:** The description is the most important field. If the user's chosen category contradicts the description, trust the description to assign the correct category. 3. **Validity Check:** The complaint must be a genuine, specific issue. Reject vague complaints (e.g., "problem in my country/mulk"), gibberish, or test messages. **Complaint Data:** - User's Chosen Category: "${data.category}" - Title: "${data.title}" - Description: "${data.description}" - Location: "${data.location}" **Your Task:** Respond ONLY with a valid JSON object. Do not include any other text or markdown. **JSON Structure:** { "priority": "Low" | "Medium" | "High", "isComplaintValid": boolean, "reasoning": "If invalid, provide a brief, user-friendly reason. Otherwise, an empty string.", "suggestedCategory": "Water Supply" | "Roads & Transportation" | "Electricity" | "Sanitation" | "Street Lighting" | "Parks & Recreation", "estimatedResolutionDays": integer between 1 and 14 }`;
 
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
@@ -103,7 +94,6 @@ export default function AIComplaintForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
       });
-
       if (!response.ok) throw new Error("AI API request failed");
       
       const result = await response.json();
@@ -112,8 +102,8 @@ export default function AIComplaintForm() {
 
       if (!parsedAiResult.isComplaintValid) {
         toast({
-          title: "Invalid Complaint Details",
-          description: "Please fill the form properly with a genuine issue. Your account may be suspended for misuse.",
+          title: "Invalid Complaint",
+          description: parsedAiResult.reasoning || "The AI determined this is not a valid complaint. Please provide specific details.",
           variant: "destructive",
         });
         setIsAiLoading(false);
@@ -124,50 +114,28 @@ export default function AIComplaintForm() {
       setAiResult(parsedAiResult);
       setComplaintId(`CMP-${Date.now().toString().slice(-6)}`);
       setFormStep('preview');
-
     } catch (error) {
       console.error("AI Analysis Error:", error);
-      toast({ title: "AI Analysis Failed", description: "Could not analyze the complaint. Please try again.", variant: "destructive" });
+      toast({ title: "AI Analysis Failed", description: "Could not analyze the complaint.", variant: "destructive" });
     } finally {
       setIsAiLoading(false);
     }
   };
 
-  // --- FINAL SUBMISSION FUNCTION ---
   const handleFinalSubmit = () => {
-    if (!password) {
-      toast({ title: "Password Required", description: "Please create a password to secure your complaint.", variant: "destructive" });
-      return;
+    if (!password || password.length < 6) {
+        toast({ title: "Password Required", description: "Please create a password of at least 6 characters.", variant: "destructive" });
+        return;
     }
-    // Map display category to backend enum value
-    const categoryMap: Record<string, string> = {
-      "Roads & Transportation": "road-transportation",
-      "Water Supply": "water-supply",
-      "Electricity": "electricity",
-      "Sanitation": "sanitation",
-      "Street Lighting": "street-lighting",
-      "Parks & Recreation": "parks-recreation",
-    };
+
+    const categoryMap: Record<string, string> = { "Roads & Transportation": "road-transportation", "Water Supply": "water-supply", "Electricity": "electricity", "Sanitation": "sanitation", "Street Lighting": "street-lighting", "Parks & Recreation": "parks-recreation" };
     const values = getValues();
     const backendCategory = categoryMap[values.category] || values.category.toLowerCase().replace(/ /g, '-');
-    const finalData = {
-      ...values,
-      category: backendCategory,
-      priority: aiResult?.priority.toLowerCase() || 'medium',
-      password: password,
-    };
+    
+    const finalData = { ...values, category: backendCategory, priority: aiResult?.priority.toLowerCase() || 'medium', password: password };
     createComplaintMutation.mutate(finalData);
   };
 
-  const resetForm = () => {
-    reset();
-    setFormStep('initial');
-    setAiResult(null);
-    setComplaintId("");
-    setPassword("");
-  };
-
-  // --- NEW: AUTO-DETECT LOCATION FUNCTION ---
   const handleDetectLocation = () => {
     setIsLocationLoading(true);
     if (!navigator.geolocation) {
@@ -180,7 +148,6 @@ export default function AIComplaintForm() {
       async (position) => {
         const { latitude, longitude } = position.coords;
         try {
-          // Use OpenStreetMap's free reverse geocoding API
           const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
           const data = await response.json();
           if (data && data.display_name) {
@@ -198,15 +165,20 @@ export default function AIComplaintForm() {
       },
       (error) => {
         let message = "An unknown error occurred.";
-        if (error.code === error.PERMISSION_DENIED) {
-          message = "You denied the request for Geolocation.";
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          message = "Location information is unavailable.";
-        }
+        if (error.code === error.PERMISSION_DENIED) message = "You denied the request for Geolocation.";
+        else if (error.code === error.POSITION_UNAVAILABLE) message = "Location information is unavailable.";
         toast({ title: "Location Error", description: message, variant: "destructive" });
         setIsLocationLoading(false);
       }
     );
+  };
+
+  const resetForm = () => {
+    reset();
+    setFormStep('initial');
+    setAiResult(null);
+    setComplaintId("");
+    setPassword("");
   };
 
   if (formStep === 'submitted') {
@@ -215,25 +187,12 @@ export default function AIComplaintForm() {
         <ShieldCheck className="mx-auto h-12 w-12 text-green-500" />
         <h3 className="mt-4 text-xl font-semibold text-gray-900">Complaint Submitted!</h3>
         <p className="mt-1 text-gray-600">Your Complaint ID is:</p>
-        <p className="text-lg font-bold text-primary-600">{complaintId}</p>
+        <p className="text-lg font-bold text-primary-600 bg-gray-100 py-2 px-4 rounded-md inline-block">{complaintId}</p>
+        <p className="mt-4 text-sm text-gray-500">You can now track this complaint. Remember your password to make changes.</p>
         <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
           <Button onClick={resetForm}><Plus className="mr-2 h-4 w-4" /> File Another Complaint</Button>
-          <Button variant="outline" onClick={() => setFormStep('editing')}>Edit Complaint</Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (formStep === 'editing') {
-    return (
-      <div className="p-2 space-y-4">
-        <h3 className="text-xl font-semibold text-center">Edit Your Complaint</h3>
-        <Input placeholder="Enter Complaint ID" value={editId} onChange={(e) => setEditId(e.target.value)} />
-        <Input type="password" placeholder="Enter Password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} />
-        <div className="flex gap-4">
-          <Button variant="outline" onClick={() => setFormStep('submitted')}>Cancel</Button>
-          <Button className="flex-1" onClick={() => {}}>
-            <KeyRound className="mr-2 h-4 w-4" /> Fetch Complaint
+          <Button variant="outline" onClick={() => navigate('/track-complaint')}>
+            <Search className="mr-2 h-4 w-4" /> Track Your Complaint
           </Button>
         </div>
       </div>
@@ -247,33 +206,29 @@ export default function AIComplaintForm() {
         <div className="space-y-3 text-sm">
           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
             <h4 className="font-semibold text-blue-800">AI Analysis Complete</h4>
-            <p><strong>Complaint ID:</strong> {complaintId}</p>
-            <p><strong>AI-Assigned Priority:</strong> <Badge>{aiResult?.priority}</Badge></p>
+            <div className="flex justify-between items-center mt-2">
+              <span><strong>AI-Assigned Priority:</strong></span>
+              <Badge className={getPriorityBadgeClass(aiResult?.priority!)}>{aiResult?.priority}</Badge>
+            </div>
             <p><strong>Estimated Resolution:</strong> {aiResult?.estimatedResolutionDays} days</p>
           </div>
-          
           <Card>
-            <CardContent className="p-3 space-y-1">
-              <p><strong>Name:</strong> {formData.name}</p>
-              <p><strong>Category:</strong> {formData.category}</p>
+             <CardContent className="p-4 space-y-2">
+              <p><strong>Name:</strong> {formData.name}</p><p><strong>Contact:</strong> {formData.contact}</p>
+              <p><strong>Location:</strong> {formData.location}</p><p><strong>AI-Corrected Category:</strong> {formData.category}</p>
               <p><strong>Title:</strong> {formData.title}</p>
+              <div className="pt-1"><p className="font-semibold">Description:</p><p className="text-gray-700 whitespace-pre-wrap bg-gray-50 p-2 rounded-md border mt-1">{formData.description}</p></div>
             </CardContent>
           </Card>
-
-          <div>
-            <label className="font-medium text-sm">Create Password to Edit Later</label>
-            <Input 
-              type="password" 
-              placeholder="Enter a password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1"
-            />
+          <div className="pt-2">
+            <label className="font-medium text-sm text-gray-800">Create a Password to Edit Later</label>
+            <p className="text-xs text-gray-500 mb-1">Minimum 6 characters. You will need this to make any changes.</p>
+            <Input type="password" placeholder="Enter a secure password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1" />
           </div>
         </div>
         <div className="mt-6 flex gap-4">
-          <Button variant="outline" onClick={() => setFormStep('initial')}><Edit className="mr-2 h-4 w-4" /> Edit</Button>
-          <Button onClick={handleFinalSubmit} disabled={!password || createComplaintMutation.isPending} className="flex-1">
+          <Button variant="outline" onClick={() => setFormStep('initial')}><Edit className="mr-2 h-4 w-4" /> Edit Details</Button>
+          <Button onClick={handleFinalSubmit} disabled={createComplaintMutation.isPending} className="flex-1">
             {createComplaintMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
             Final Submit
           </Button>
@@ -284,49 +239,36 @@ export default function AIComplaintForm() {
 
   return (
     <form onSubmit={handleSubmit(handleAnalyzeComplaint)} className="space-y-3">
-      <Input placeholder="Your Name" {...register("name")} />
-      {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
-      
-      <Input placeholder="Contact Number" {...register("contact")} />
-      {errors.contact && <p className="text-red-500 text-xs">{errors.contact.message}</p>}
-
-      <Controller
-        name="category"
-        control={control}
-        render={({ field }) => (
-          <Select onValueChange={field.onChange} value={field.value}>
-            <SelectTrigger><SelectValue placeholder="Select Complaint Category" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Water Supply">Water Supply</SelectItem>
-              <SelectItem value="Roads & Transportation">Roads & Transportation</SelectItem>
-              <SelectItem value="Electricity">Electricity</SelectItem>
-              <SelectItem value="Sanitation">Sanitation</SelectItem>
-              <SelectItem value="Street Lighting">Street Lighting</SelectItem>
-              <SelectItem value="Parks & Recreation">Parks & Recreation</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-      />
-      {errors.category && <p className="text-red-500 text-xs">{errors.category.message}</p>}
-
-      <Input placeholder="Complaint Title (e.g., Pothole on MG Road)" {...register("title")} />
-      {errors.title && <p className="text-red-500 text-xs">{errors.title.message}</p>}
-      
-      {/* --- NEW: Location Input with Auto-Detect Button --- */}
-      <div className="flex items-center gap-2">
-        <Input placeholder="Location (e.g., Near Palasia Square)" {...register("location")} className="flex-grow" />
-        <Button type="button" variant="outline" size="icon" onClick={handleDetectLocation} disabled={isLocationLoading}>
-          {isLocationLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+        <Input placeholder="Your Name" {...register("name")} />
+        {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
+        <Input placeholder="Contact Number" {...register("contact")} />
+        {errors.contact && <p className="text-red-500 text-xs">{errors.contact.message}</p>}
+        <Controller name="category" control={control} render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger><SelectValue placeholder="Select Complaint Category" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="Water Supply">Water Supply</SelectItem><SelectItem value="Roads & Transportation">Roads & Transportation</SelectItem>
+                    <SelectItem value="Electricity">Electricity</SelectItem><SelectItem value="Sanitation">Sanitation</SelectItem>
+                    <SelectItem value="Street Lighting">Street Lighting</SelectItem><SelectItem value="Parks & Recreation">Parks & Recreation</SelectItem>
+                </SelectContent>
+            </Select>
+        )} />
+        {errors.category && <p className="text-red-500 text-xs">{errors.category.message}</p>}
+        <Input placeholder="Complaint Title (e.g., Pothole on MG Road)" {...register("title")} />
+        {errors.title && <p className="text-red-500 text-xs">{errors.title.message}</p>}
+        <div className="flex items-center gap-2">
+            <Input placeholder="Location (e.g., Near Palasia Square, Indore)" {...register("location")} className="flex-grow" />
+            <Button type="button" variant="outline" size="icon" onClick={handleDetectLocation} disabled={isLocationLoading}>
+                {isLocationLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+            </Button>
+        </div>
+        {errors.location && <p className="text-red-500 text-xs">{errors.location.message}</p>}
+        <Textarea placeholder="Describe your complaint in detail..." {...register("description")} rows={3} />
+        {errors.description && <p className="text-red-500 text-xs">{errors.description.message}</p>}
+        <Button type="submit" className="w-full" disabled={isAiLoading}>
+            {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Brain className="mr-2 h-4 w-4"/>}
+            Analyze Complaint
         </Button>
-      </div>
-      {errors.location && <p className="text-red-500 text-xs">{errors.location.message}</p>}
-      
-      <Textarea placeholder="Describe your complaint in detail..." {...register("description")} rows={3} />
-      {errors.description && <p className="text-red-500 text-xs">{errors.description.message}</p>}
-      
-      <Button type="submit" className="w-full" disabled={isAiLoading}>
-        {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Analyze Complaint"}
-      </Button>
     </form>
   );
 }

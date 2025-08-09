@@ -7,6 +7,7 @@ import AIComplaintForm from "@/components/ai-complaint-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 import { 
   Plus, 
   Search, 
@@ -26,6 +27,9 @@ export default function HomePage() {
   const { user } = useAuth();
   // The showComplaintForm state is no longer needed as the form is always visible
   const [selectedDashboard, setSelectedDashboard] = useState<'citizen' | 'official'>('citizen');
+
+  // Navigate track complent
+  const navigate = useNavigate();
 
   // Fetch AI accuracy rates
   const { data: aiAccuracy, isLoading: aiLoading } = useQuery({
@@ -127,7 +131,7 @@ export default function HomePage() {
                 </Button>
                 <Button 
                   size="lg" 
-                  variant="secondary"
+                  variant="secondary"onClick={() => navigate('/track-complaint')}
                 >
                   <Search className="mr-2 h-5 w-5" />
                   Track Complaint
@@ -158,7 +162,9 @@ export default function HomePage() {
                 <CardDescription className="text-center text-gray-600">Let our AI assist you in filing your complaint.</CardDescription>
               </CardHeader>
               <CardContent className="p-8">
-                <AIComplaintForm />
+                <AIComplaintForm onNavigateToTrack={function (): void {
+                  throw new Error("Function not implemented.");
+                } } />
               </CardContent>
             </Card>
           </div>
