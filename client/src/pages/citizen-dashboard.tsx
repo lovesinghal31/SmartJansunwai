@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSocket } from "@/hooks/useSocket";
 import { useToast } from "@/hooks/use-toast";
@@ -7,7 +7,8 @@ import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import ComplaintCard from "@/components/complaint-card";
-import ComplaintForm from "@/components/complaint-form";
+// --- FIX: Import the new AIComplaintForm ---
+import AIComplaintForm from "@/components/ai-complaint-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -35,7 +36,6 @@ export default function CitizenDashboard() {
     enabled: !!user && !!accessToken,
   });
 
-  // Real-time notifications using Socket.IO
   const handleNotification = useCallback((notification: any) => {
     setNotifications((prev) => [notification, ...prev]);
     if (lastNotificationId.current !== notification.id) {
@@ -52,7 +52,7 @@ export default function CitizenDashboard() {
 
   const filteredComplaints = complaints.filter(complaint => {
     const matchesSearch = complaint.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         complaint.description.toLowerCase().includes(searchTerm.toLowerCase());
+                          complaint.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || complaint.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -67,16 +67,6 @@ export default function CitizenDashboard() {
   const inProgressComplaints = statusCounts["in-progress"] || 0;
   const avgResolutionTime = resolvedComplaints > 0 ? "4.2 days" : "N/A";
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "submitted": return "bg-blue-100 text-blue-800";
-      case "in-progress": return "bg-yellow-100 text-yellow-800";
-      case "under-review": return "bg-purple-100 text-purple-800";
-      case "resolved": return "bg-green-100 text-green-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
   if (!user || user.role !== "citizen") {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -90,7 +80,6 @@ export default function CitizenDashboard() {
       <Header />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">My Complaints</h1>
@@ -103,16 +92,14 @@ export default function CitizenDashboard() {
                 New Complaint
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl">
               <DialogHeader>
                 <DialogTitle>Submit New Complaint</DialogTitle>
               </DialogHeader>
-              <ComplaintForm 
-                onSuccess={() => {
-                  setShowComplaintForm(false);
-                  refetch();
-                }} 
-              />
+              {/* --- FIX: Use the AIComplaintForm component --- */}
+              <AIComplaintForm onNavigateToTrack={function (): void {
+                throw new Error("Function not implemented.");
+              } } />
             </DialogContent>
           </Dialog>
         </div>
