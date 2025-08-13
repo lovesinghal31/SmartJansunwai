@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useState, useEffect } from "react";
 
 interface ComplaintFormProps {
   onSuccess?: () => void;
@@ -19,6 +20,30 @@ interface ComplaintFormProps {
 export default function ComplaintForm({ onSuccess }: ComplaintFormProps) {
   const { toast } = useToast();
   const { accessToken } = useAuth();
+  
+  // Categories state for dynamic loading
+  const [categories, setCategories] = useState<Array<{id: string, name: string, slug: string}>>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    async function fetchCategories() {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
+      try {
+        const res = await fetch("/api/categories");
+        if (!res.ok) throw new Error("Failed to fetch categories");
+        const data = await res.json();
+        setCategories(data);
+      } catch (err: any) {
+        setCategoriesError(err.message || "Unknown error");
+      } finally {
+        setCategoriesLoading(false);
+      }
+    }
+    fetchCategories();
+  }, []);
   
   const form = useForm<InsertComplaint>({
     resolver: zodResolver(insertComplaintSchema),
@@ -64,16 +89,15 @@ export default function ComplaintForm({ onSuccess }: ComplaintFormProps) {
           onValueChange={(value) => form.setValue("category", value)}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Select Category" />
+            <SelectValue placeholder={categoriesLoading ? "Loading..." : "Select Category"} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="road-transportation">Road & Transportation</SelectItem>
-            <SelectItem value="water-supply">Water Supply</SelectItem>
-            <SelectItem value="electricity">Electricity</SelectItem>
-            <SelectItem value="sanitation">Sanitation</SelectItem>
-            <SelectItem value="street-lighting">Street Lighting</SelectItem>
-            <SelectItem value="parks-recreation">Parks & Recreation</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
+            {categoriesLoading && <div className="p-2 text-gray-500">Loading...</div>}
+            {categoriesError && <div className="p-2 text-red-500">{categoriesError}</div>}
+            {!categoriesLoading && !categoriesError && categories.map((category) => (
+              <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
+            ))}
+            <SelectItem value="Other">Other</SelectItem>
           </SelectContent>
         </Select>
         {form.formState.errors.category && (

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -35,6 +35,30 @@ export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const navigate = useNavigate(); // ✅ Correct hook
   const [activeTab, setActiveTab] = useState("login");
+  
+  // Department state for dynamic loading
+  const [departments, setDepartments] = useState<Array<{id: string, name: string, slug: string}>>([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(true);
+  const [departmentsError, setDepartmentsError] = useState<string | null>(null);
+
+  // Fetch departments on component mount
+  useEffect(() => {
+    async function fetchDepartments() {
+      setDepartmentsLoading(true);
+      setDepartmentsError(null);
+      try {
+        const res = await fetch("/api/categories");
+        if (!res.ok) throw new Error("Failed to fetch departments");
+        const data = await res.json();
+        setDepartments(data);
+      } catch (err: any) {
+        setDepartmentsError(err.message || "Unknown error");
+      } finally {
+        setDepartmentsLoading(false);
+      }
+    }
+    fetchDepartments();
+  }, []);
 
   const loginForm = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
@@ -228,12 +252,11 @@ export default function AuthPage() {
                           <SelectValue placeholder="Select your department" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="road-transportation">Road & Transportation</SelectItem>
-                          <SelectItem value="water-supply">Water Supply</SelectItem>
-                          <SelectItem value="electricity">Electricity</SelectItem>
-                          <SelectItem value="sanitation">Sanitation</SelectItem>
-                          <SelectItem value="street-lighting">Street Lighting</SelectItem>
-                          <SelectItem value="parks-recreation">Parks & Recreation</SelectItem>
+                          {departmentsLoading && <div className="p-2 text-gray-500">Loading...</div>}
+                          {departmentsError && <div className="p-2 text-red-500">{departmentsError}</div>}
+                          {!departmentsLoading && !departmentsError && departments.map((dept) => (
+                            <SelectItem key={dept.id} value={dept.slug || dept.id}>{dept.name}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       {registerForm.formState.errors.department && (
