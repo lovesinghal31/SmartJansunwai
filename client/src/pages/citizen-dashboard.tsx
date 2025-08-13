@@ -1,22 +1,29 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useSocket } from "@/hooks/useSocket";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
-import ComplaintCard from "@/components/complaint-card";
-import ComplaintForm from "@/components/complaint-form";
+import AIComplaintForm from "@/components/ai-complaint-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Filter } from "lucide-react";
-import type { Complaint, Notification } from "@shared/schema";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { 
+  Plus, 
+  Search, 
+  Bot, 
+  MapPin, 
+  MessageSquare, 
+  Smartphone, 
+  TrendingUp, 
+  Shield,
+  Brain,
+  BarChart3,
+  Heart,
+  Loader2
+} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
+<<<<<<< HEAD
 // Type for status options from backend
 interface StatusOption {
   value: string;
@@ -54,141 +61,149 @@ export default function CitizenDashboard() {
     }
     fetchStatusOptions();
   }, []);
+=======
+// Define the structure for the stats data we expect from the API
+interface HomepageStats {
+  totalComplaints: number;
+  resolvedComplaints: number;
+  avgResolutionDays: number;
+}
 
-  const { data: complaints = [], isLoading, refetch } = useQuery<Complaint[]>({
-    queryKey: ["/api/complaints"],
+interface AiAccuracyStats {
+    classification: number;
+    prediction: number;
+    sentiment: number;
+}
+
+// --- NEW: Define structure for the dashboard preview stats ---
+interface DashboardPreviewStats {
+    total: number;
+    inProgressOrUrgent: number;
+    resolved: number;
+    avgDays: number;
+}
+
+export default function HomePage() {
+  const { user, accessToken } = useAuth();
+  const [selectedDashboard, setSelectedDashboard] = useState<'citizen' | 'official'>('citizen');
+  const navigate = useNavigate();
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
+
+  const { data: homepageStats, isLoading: statsLoading } = useQuery<HomepageStats>({
+    queryKey: ["/api/stats/homepage"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/complaints", undefined, accessToken);
+      const res = await apiRequest("GET", "/api/stats/homepage");
+      if (!res.ok) throw new Error("Failed to fetch homepage stats");
       return res.json();
     },
-    enabled: !!user && !!accessToken,
+    placeholderData: { totalComplaints: 0, resolvedComplaints: 0, avgResolutionDays: 0 },
   });
 
-  // Real-time notifications using Socket.IO
-  const handleNotification = useCallback((notification: any) => {
-    setNotifications((prev) => [notification, ...prev]);
-    if (lastNotificationId.current !== notification.id) {
-      toast({
-        title: notification.title || "New Notification",
-        description: notification.message,
-        variant: notification.type === "error" ? "destructive" : "default",
-      });
-      lastNotificationId.current = notification.id;
+  const { data: aiAccuracy, isLoading: aiLoading } = useQuery<AiAccuracyStats>({
+    queryKey: ["/api/ai/accuracy"],
+    queryFn: async () => {
+      return { classification: 92, prediction: 85, sentiment: 88 };
+    },
+    placeholderData: { classification: 0, prediction: 0, sentiment: 0 },
+  });
+
+  // --- NEW: Fetch stats for the selected dashboard preview ---
+  const { data: dashboardStats, isLoading: dashboardLoading } = useQuery<DashboardPreviewStats>({
+    // The query key changes when the selected dashboard changes, triggering a refetch
+    queryKey: ["/api/stats/dashboard", selectedDashboard], 
+    queryFn: async () => {
+        // This single endpoint should be smart enough to return different data 
+        // based on the user's role (citizen vs official)
+        const res = await apiRequest("GET", `/api/stats/dashboard/${selectedDashboard}`, undefined, accessToken);
+        if (!res.ok) throw new Error(`Failed to fetch ${selectedDashboard} dashboard stats`);
+        return res.json();
+    },
+    // Only run this query if the user is logged in
+    enabled: !!user, 
+    placeholderData: { total: 0, inProgressOrUrgent: 0, resolved: 0, avgDays: 0 }
+  });
+
+  const features = [
+    { icon: Bot, title: "AI-Powered Classification", description: "Automatically categorize and route complaints to the right department using advanced NLP algorithms.", color: "bg-purple-100 text-purple-800" },
+    { icon: MapPin, title: "Interactive Complaint Map", description: "Visualize complaints geographically with real-time plotting and heatmap analysis.", color: "bg-green-100 text-green-600" },
+    { icon: MessageSquare, title: "Smart Chatbot Assistant", description: "Get instant help and guidance through our AI chatbot trained on common civic issues.", color: "bg-yellow-100 text-yellow-600" },
+    { icon: Smartphone, title: "Mobile-First PWA", description: "Access the platform seamlessly across all devices with offline support and push notifications.", color: "bg-purple-100 text-purple-600" },
+    { icon: TrendingUp, title: "Real-time Analytics", description: "Comprehensive dashboards with performance metrics and predictive insights for officials.", color: "bg-green-100 text-green-600" },
+    { icon: Shield, title: "Smart SLA Management", description: "Automated escalation and priority assignment based on complaint type and severity.", color: "bg-red-100 text-red-600" }
+  ];
+
+  const aiFeatures = [
+    { icon: Brain, title: "Smart Classification", description: "Automatically categorize complaints and route them to the appropriate department using NLP.", value: aiAccuracy?.classification },
+    { icon: BarChart3, title: "Predictive Analytics", description: "Forecast complaint trends and identify potential issues before they escalate.", value: aiAccuracy?.prediction },
+    { icon: Heart, title: "Sentiment Analysis", description: "Understand citizen emotions and prioritize complaints based on urgency and sentiment.", value: aiAccuracy?.sentiment }
+  ];
+
+  const handleDashboardRedirect = () => {
+    if (user?.role === 'official' || user?.role === 'admin') {
+      navigate('/official-dashboard');
+    } else {
+      navigate('/citizen-dashboard');
     }
-  }, [toast]);
-
-  useSocket(user?.id || "", handleNotification);
-
-  const filteredComplaints = complaints.filter(complaint => {
-    const matchesSearch = complaint.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         complaint.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || complaint.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const statusCounts = complaints.reduce((acc, complaint) => {
-    acc[complaint.status] = (acc[complaint.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const totalComplaints = complaints.length;
-  const resolvedComplaints = statusCounts.resolved || 0;
-  const inProgressComplaints = statusCounts["in-progress"] || 0;
-  const avgResolutionTime = resolvedComplaints > 0 ? "4.2 days" : "N/A";
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "submitted": return "bg-blue-100 text-blue-800";
-      case "in-progress": return "bg-yellow-100 text-yellow-800";
-      case "under-review": return "bg-purple-100 text-purple-800";
-      case "resolved": return "bg-green-100 text-green-800";
-      default: return "bg-gray-100 text-gray-800";
+  };
+  
+  // --- NEW: Function to handle the button click in the dashboard preview header ---
+  const handlePreviewHeaderButtonClick = () => {
+    if (selectedDashboard === 'citizen') {
+        // For citizens, scroll to the complaint form at the top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        // For officials, navigate to the analytics page
+        navigate('/analytics');
     }
   };
 
-  if (!user || user.role !== "citizen") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-600">Access denied. Citizens only.</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       <Header />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Complaints</h1>
-            <p className="text-gray-600 mt-1">Track and manage your submitted complaints</p>
-          </div>
-          <Dialog open={showComplaintForm} onOpenChange={setShowComplaintForm}>
-            <DialogTrigger asChild>
-              <Button className="mt-4 sm:mt-0">
-                <Plus className="mr-2 h-4 w-4" />
-                New Complaint
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Submit New Complaint</DialogTitle>
-              </DialogHeader>
-              <ComplaintForm 
-                onSuccess={() => {
-                  setShowComplaintForm(false);
-                  refetch();
-                }} 
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
+      <section className="text-white py-20 bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h1 className="text-4xl lg:text-5xl font-extrabold mb-6 leading-tight">
+                Smart Grievance Redressal for <span className="text-yellow-400">Indore</span>
+              </h1>
+              <p className="text-xl text-blue-100 mb-8 leading-relaxed">
+                AI-powered platform to submit, track, and resolve civic complaints efficiently. Your voice matters in building a better Indore.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <Button size="lg" className="bg-white text-gray-900 hover:bg-gray-200" onClick={handleDashboardRedirect}>
+                  <Plus className="mr-2 h-5 w-5" />
+                  Go to dashboard
+                </Button>
+                <Button size="lg" variant="secondary" onClick={() => navigate('/track-complaint')}>
+                  <Search className="mr-2 h-5 w-5" />
+                  Track Complaint
+                </Button>
+              </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-blue-600">{totalComplaints}</div>
-              <div className="text-sm text-blue-700">Total Complaints</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-yellow-50 border-yellow-200">
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-yellow-600">{inProgressComplaints}</div>
-              <div className="text-sm text-yellow-700">In Progress</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-green-50 border-green-200">
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-green-600">{resolvedComplaints}</div>
-              <div className="text-sm text-green-700">Resolved</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gray-50 border-gray-200">
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-gray-600">{avgResolutionTime}</div>
-              <div className="text-sm text-gray-700">Avg Resolution</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search complaints..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+              <div className="grid grid-cols-3 gap-6 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-yellow-300">
+                    {statsLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin" /> : (homepageStats?.totalComplaints ?? 0).toLocaleString()}
+                  </div>
+                  <div className="text-sm text-blue-100">Total Complaints</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-green-300">
+                    {statsLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin" /> : (homepageStats?.resolvedComplaints ?? 0).toLocaleString()}
+                  </div>
+                  <div className="text-sm text-blue-100">Resolved</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-yellow-300">
+                    {statsLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin" /> : `${(homepageStats?.avgResolutionDays ?? 0).toFixed(1)} days`}
+                  </div>
+                  <div className="text-sm text-blue-100">Avg Resolution</div>
                 </div>
               </div>
+<<<<<<< HEAD
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-48">
                   <Filter className="mr-2 h-4 w-4" />
@@ -203,40 +218,139 @@ export default function CitizenDashboard() {
                   ))}
                 </SelectContent>
               </Select>
+=======
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Complaints List */}
-        {isLoading ? (
-          <div className="text-center py-8">
-            <p className="text-gray-600">Loading complaints...</p>
+            <Card className="bg-white shadow-2xl w-full max-w-lg mx-auto">
+              <CardHeader>
+                <CardTitle className="text-center text-2xl font-bold text-gray-900">Quick Complaint Submission</CardTitle>
+                <CardDescription className="text-center text-gray-600">Let our AI assist you in filing your complaint.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8">
+                <AIComplaintForm onNavigateToTrack={() => navigate('/track-complaint')} />
+              </CardContent>
+            </Card>
           </div>
-        ) : filteredComplaints.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <p className="text-gray-600 mb-4">
-                {complaints.length === 0 
-                  ? "You haven't submitted any complaints yet." 
-                  : "No complaints match your search criteria."
-                }
-              </p>
-              {complaints.length === 0 && (
-                <Button onClick={() => setShowComplaintForm(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Submit Your First Complaint
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {filteredComplaints.map((complaint) => (
-              <ComplaintCard key={complaint.id} complaint={complaint} />
+        </div>
+      </section>
+
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Platform Features</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Advanced AI-powered tools and intuitive interfaces designed to streamline the grievance redressal process for both citizens and officials.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <div key={index} className="bg-gray-50 rounded-xl p-6 hover:shadow-lg transition-shadow">
+                <div className={`w-12 h-12 ${feature.color} rounded-lg flex items-center justify-center mb-4`}>
+                  <feature.icon size={20} />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                <p className="text-gray-600 text-sm">{feature.description}</p>
+              </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      </section>
+
+      {/* --- UPDATED Dashboard Preview --- */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Dual Dashboard Experience</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Separate optimized interfaces for citizens to track their complaints and officials to manage resolutions efficiently.
+            </p>
+          </div>
+          
+          <div className="flex justify-center mb-8">
+            <div className="bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+              <Button variant={selectedDashboard === 'citizen' ? 'default' : 'ghost'} onClick={() => setSelectedDashboard('citizen')} className="px-6 py-2">
+                Citizen Dashboard
+              </Button>
+              <Button variant={selectedDashboard === 'official' ? 'default' : 'ghost'} onClick={() => setSelectedDashboard('official')} className="px-6 py-2">
+                Official Dashboard
+              </Button>
+            </div>
+          </div>
+          
+          <Card className="shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>
+                {selectedDashboard === 'citizen' ? 'My Complaints' : 'Complaint Management'}
+              </CardTitle>
+              {/* This button is now fully functional */}
+              <Button onClick={handlePreviewHeaderButtonClick}>
+                <Plus className="mr-2 h-4 w-4" />
+                {selectedDashboard === 'citizen' ? 'New Complaint' : 'View Analytics'}
+              </Button>
+            </CardHeader>
+            <CardContent>
+                {/* Show a message if user is not logged in */}
+                {!user ? (
+                    <div className="text-center py-12 text-gray-500">
+                        <p>Please log in to see your dashboard stats.</p>
+                        <Button className="mt-4" onClick={() => navigate('/auth')}>Login</Button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <Card className="bg-blue-50 border-blue-200"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-blue-600">{dashboardLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : dashboardStats?.total}</div><div className="text-sm text-blue-700">{selectedDashboard === 'citizen' ? 'Total Complaints' : 'Total Active'}</div></CardContent></Card>
+                        <Card className="bg-yellow-50 border-yellow-200"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-yellow-600">{dashboardLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : dashboardStats?.inProgressOrUrgent}</div><div className="text-sm text-yellow-700">{selectedDashboard === 'citizen' ? 'In Progress' : 'Urgent'}</div></CardContent></Card>
+                        <Card className="bg-green-50 border-green-200"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-green-600">{dashboardLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : dashboardStats?.resolved}</div><div className="text-sm text-green-700">{selectedDashboard === 'citizen' ? 'Resolved' : 'Resolved Today'}</div></CardContent></Card>
+                        <Card className="bg-gray-50 border-gray-200"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-gray-600">{dashboardLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : `${(dashboardStats?.avgDays ?? 0).toFixed(1)} days`}</div><div className="text-sm text-gray-700">Avg Days</div></CardContent></Card>
+                    </div>
+                )}
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">AI-Powered Intelligence</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Advanced machine learning algorithms working behind the scenes to improve efficiency and citizen experience.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* --- FIX: Reformatted this section to prevent parsing errors --- */}
+            {aiFeatures.map((feature, index) => (
+              <Card key={index} className="bg-gradient-to-br from-white to-gray-100">
+                <CardContent className="p-6 flex flex-col h-full justify-between">
+                  <div>
+                    <div className="w-12 h-12 bg-white bg-opacity-80 rounded-lg flex items-center justify-center mb-4">
+                      <feature.icon size={20} className="text-gray-700" />
+                    </div>
+                    <div className="mb-4 min-h-[100px]">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                      <p className="text-gray-600 text-sm">{feature.description}</p>
+                    </div>
+                  </div>
+                  <Card className="bg-white mt-auto">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between mb-2 text-xs">
+                        <span className="text-gray-600">Accuracy Rate</span>
+                        <span className="font-semibold text-gray-800">{aiLoading ? '--' : `${feature.value}%`}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div 
+                          className="bg-blue-400 h-1.5 rounded-full transition-all duration-500" 
+                          style={{ width: aiLoading ? '0%' : `${feature.value}%` }}
+                        ></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <Footer />
     </div>
