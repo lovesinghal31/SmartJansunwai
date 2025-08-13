@@ -2,11 +2,9 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
-// --- FIX: Import the new AI-powered form ---
 import AIComplaintForm from "@/components/ai-complaint-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { 
   Plus, 
@@ -19,169 +17,168 @@ import {
   Shield,
   Brain,
   BarChart3,
-  Heart
+  Heart,
+  Loader2
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+
+// Define the structure for the stats data we expect from the API
+interface HomepageStats {
+  totalComplaints: number;
+  resolvedComplaints: number;
+  avgResolutionDays: number;
+}
+
+interface AiAccuracyStats {
+    classification: number;
+    prediction: number;
+    sentiment: number;
+}
+
+// --- NEW: Define structure for the dashboard preview stats ---
+interface DashboardPreviewStats {
+    total: number;
+    inProgressOrUrgent: number;
+    resolved: number;
+    avgDays: number;
+}
 
 export default function HomePage() {
-  const { user } = useAuth();
-  // The showComplaintForm state is no longer needed as the form is always visible
+  const { user, accessToken } = useAuth();
   const [selectedDashboard, setSelectedDashboard] = useState<'citizen' | 'official'>('citizen');
-
-  // Navigate track complent
   const navigate = useNavigate();
 
-  // Fetch AI accuracy rates
-  const { data: aiAccuracy, isLoading: aiLoading } = useQuery({
+  const { data: homepageStats, isLoading: statsLoading } = useQuery<HomepageStats>({
+    queryKey: ["/api/stats/homepage"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/stats/homepage");
+      if (!res.ok) throw new Error("Failed to fetch homepage stats");
+      return res.json();
+    },
+    placeholderData: { totalComplaints: 0, resolvedComplaints: 0, avgResolutionDays: 0 },
+  });
+
+  const { data: aiAccuracy, isLoading: aiLoading } = useQuery<AiAccuracyStats>({
     queryKey: ["/api/ai/accuracy"],
     queryFn: async () => {
-      // Using mock data as the API endpoint doesn't exist yet
       return { classification: 92, prediction: 85, sentiment: 88 };
     },
+    placeholderData: { classification: 0, prediction: 0, sentiment: 0 },
+  });
+
+  // --- FIX: Added keepPreviousData to prevent flickering ---
+  const { data: dashboardStats, isLoading: dashboardLoading } = useQuery<DashboardPreviewStats>({
+    queryKey: ["/api/stats/dashboard", selectedDashboard], 
+    queryFn: async () => {
+        const res = await apiRequest("GET", `/api/stats/dashboard/${selectedDashboard}`, undefined, accessToken);
+        if (!res.ok) throw new Error(`Failed to fetch ${selectedDashboard} dashboard stats`);
+        return res.json();
+    },
+    enabled: !!user, 
+    placeholderData: { total: 0, inProgressOrUrgent: 0, resolved: 0, avgDays: 0 }
   });
 
   const features = [
-    {
-      icon: Bot,
-      title: "AI-Powered Classification",
-      description: "Automatically categorize and route complaints to the right department using advanced NLP algorithms.",
-      color: "bg-purple-100 text-purple-800"
-    },
-    {
-      icon: MapPin,
-      title: "Interactive Complaint Map",
-      description: "Visualize complaints geographically with real-time plotting and heatmap analysis.",
-      color: "bg-green-100 text-green-600",
-    },
-    {
-      icon: MessageSquare,
-      title: "Smart Chatbot Assistant",
-      description: "Get instant help and guidance through our AI chatbot trained on common civic issues.",
-      color: "bg-yellow-100 text-yellow-600"
-    },
-    {
-      icon: Smartphone,
-      title: "Mobile-First PWA",
-      description: "Access the platform seamlessly across all devices with offline support and push notifications.",
-      color: "bg-purple-100 text-purple-600"
-    },
-    {
-      icon: TrendingUp,
-      title: "Real-time Analytics",
-      description: "Comprehensive dashboards with performance metrics and predictive insights for officials.",
-      color: "bg-green-100 text-green-600"
-    },
-    {
-      icon: Shield,
-      title: "Smart SLA Management",
-      description: "Automated escalation and priority assignment based on complaint type and severity.",
-      color: "bg-red-100 text-red-600"
-    }
+    { icon: Bot, title: "AI-Powered Classification", description: "Automatically categorize and route complaints to the right department using advanced NLP algorithms.", color: "bg-purple-100 text-purple-800" },
+    { icon: MapPin, title: "Interactive Complaint Map", description: "Visualize complaints geographically with real-time plotting and heatmap analysis.", color: "bg-green-100 text-green-600" },
+    { icon: MessageSquare, title: "Smart Chatbot Assistant", description: "Get instant help and guidance through our AI chatbot trained on common civic issues.", color: "bg-yellow-100 text-yellow-600" },
+    { icon: Smartphone, title: "Mobile-First PWA", description: "Access the platform seamlessly across all devices with offline support and push notifications.", color: "bg-purple-100 text-purple-600" },
+    { icon: TrendingUp, title: "Real-time Analytics", description: "Comprehensive dashboards with performance metrics and predictive insights for officials.", color: "bg-green-100 text-green-600" },
+    { icon: Shield, title: "Smart SLA Management", description: "Automated escalation and priority assignment based on complaint type and severity.", color: "bg-red-100 text-red-600" }
   ];
 
   const aiFeatures = [
-    {
-      icon: Brain,
-      title: "Smart Classification",
-      description: "Automatically categorize complaints and route them to the appropriate department using NLP.",
-      accuracy: aiLoading || !aiAccuracy ? "--" : `${aiAccuracy.classification}%`,
-      color: "from-purple-50 to-blue-50 border-purple-100"
-    },
-    {
-      icon: BarChart3,
-      title: "Predictive Analytics",
-      description: "Forecast complaint trends and identify potential issues before they escalate.",
-      accuracy: aiLoading || !aiAccuracy ? "--" : `${aiAccuracy.prediction}%`,
-      color: "from-green-50 to-emerald-50 border-green-100"
-    },
-    {
-      icon: Heart,
-      title: "Sentiment Analysis",
-      description: "Understand citizen emotions and prioritize complaints based on urgency and sentiment.",
-      accuracy: aiLoading || !aiAccuracy ? "--" : `${aiAccuracy.sentiment}%`,
-      color: "from-orange-50 to-red-50 border-orange-100"
-    }
+    { icon: Brain, title: "Smart Classification", description: "Automatically categorize complaints and route them to the appropriate department using NLP.", value: aiAccuracy?.classification },
+    { icon: BarChart3, title: "Predictive Analytics", description: "Forecast complaint trends and identify potential issues before they escalate.", value: aiAccuracy?.prediction },
+    { icon: Heart, title: "Sentiment Analysis", description: "Understand citizen emotions and prioritize complaints based on urgency and sentiment.", value: aiAccuracy?.sentiment }
   ];
+
+  const handleDashboardRedirect = () => {
+    if (user?.role === 'official' || user?.role === 'admin') {
+      navigate('/official-dashboard');
+    } else {
+      navigate('/citizen-dashboard');
+    }
+  };
+  
+  const handlePreviewHeaderButtonClick = () => {
+    if (selectedDashboard === 'citizen') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        navigate('/analytics');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
       <Header />
       
-      {/* Hero Section */}
       <section className="text-white py-20 bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <h1 className="text-4xl lg:text-5xl font-extrabold mb-6 leading-tight">
-                Smart Grievance Redressal for{" "}
-                <span className="text-yellow-400">Indore</span>
+                Smart Grievance Redressal for <span className="text-yellow-400">Indore</span>
               </h1>
               <p className="text-xl text-blue-100 mb-8 leading-relaxed">
-                AI-powered platform to submit, track, and resolve civic complaints efficiently. 
-                Your voice matters in building a better Indore.
+                AI-powered platform to submit, track, and resolve civic complaints efficiently. Your voice matters in building a better Indore.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Button 
-                  size="lg" 
-                  className="bg-white text-gray-900 hover:bg-gray-200"
-                >
+                <Button size="lg" className="bg-white text-gray-900 hover:bg-gray-200" onClick={handleDashboardRedirect}>
                   <Plus className="mr-2 h-5 w-5" />
-                  Submit New Complaint
+                  Go to dashboard
                 </Button>
-                <Button 
-                  size="lg" 
-                  variant="secondary"onClick={() => navigate('/track-complaint')}
-                >
+                <Button size="lg" variant="secondary" onClick={() => navigate('/track-complaint')}>
                   <Search className="mr-2 h-5 w-5" />
                   Track Complaint
                 </Button>
               </div>
 
-              {/* Quick Stats */}
               <div className="grid grid-cols-3 gap-6 text-center">
                 <div>
-                  <div className="text-2xl font-bold text-yellow-300">12,847</div>
+                  <div className="text-2xl font-bold text-yellow-300">
+                    {statsLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin" /> : (homepageStats?.totalComplaints ?? 0).toLocaleString()}
+                  </div>
                   <div className="text-sm text-blue-100">Total Complaints</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-green-300">10,234</div>
+                  <div className="text-2xl font-bold text-green-300">
+                    {statsLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin" /> : (homepageStats?.resolvedComplaints ?? 0).toLocaleString()}
+                  </div>
                   <div className="text-sm text-blue-100">Resolved</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-yellow-300">4.2 days</div>
+                  <div className="text-2xl font-bold text-yellow-300">
+                    {statsLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin" /> : `${(homepageStats?.avgResolutionDays ?? 0).toFixed(1)} days`}
+                  </div>
                   <div className="text-sm text-blue-100">Avg Resolution</div>
                 </div>
               </div>
             </div>
 
-            {/* --- FIX: This Card now uses the new AIComplaintForm --- */}
             <Card className="bg-white shadow-2xl w-full max-w-lg mx-auto">
               <CardHeader>
                 <CardTitle className="text-center text-2xl font-bold text-gray-900">Quick Complaint Submission</CardTitle>
                 <CardDescription className="text-center text-gray-600">Let our AI assist you in filing your complaint.</CardDescription>
               </CardHeader>
               <CardContent className="p-8">
-                <AIComplaintForm onNavigateToTrack={function (): void {
-                  throw new Error("Function not implemented.");
-                } } />
+                <AIComplaintForm onNavigateToTrack={() => navigate('/track-complaint')} />
               </CardContent>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* Features Overview */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Platform Features</h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Advanced AI-powered tools and intuitive interfaces designed to streamline 
-              the grievance redressal process for both citizens and officials.
+              Advanced AI-powered tools and intuitive interfaces designed to streamline the grievance redressal process for both citizens and officials.
             </p>
           </div>
-          
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <div key={index} className="bg-gray-50 rounded-xl p-6 hover:shadow-lg transition-shadow">
@@ -196,7 +193,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Dashboard Preview */}
+      {/* --- UPDATED Dashboard Preview --- */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -208,18 +205,10 @@ export default function HomePage() {
           
           <div className="flex justify-center mb-8">
             <div className="bg-white rounded-lg p-1 shadow-sm border border-gray-200">
-              <Button
-                variant={selectedDashboard === 'citizen' ? 'default' : 'ghost'}
-                onClick={() => setSelectedDashboard('citizen')}
-                className="px-6 py-2"
-              >
+              <Button variant={selectedDashboard === 'citizen' ? 'default' : 'ghost'} onClick={() => setSelectedDashboard('citizen')} className="px-6 py-2">
                 Citizen Dashboard
               </Button>
-              <Button
-                variant={selectedDashboard === 'official' ? 'default' : 'ghost'}
-                onClick={() => setSelectedDashboard('official')}
-                className="px-6 py-2"
-              >
+              <Button variant={selectedDashboard === 'official' ? 'default' : 'ghost'} onClick={() => setSelectedDashboard('official')} className="px-6 py-2">
                 Official Dashboard
               </Button>
             </div>
@@ -230,62 +219,30 @@ export default function HomePage() {
               <CardTitle>
                 {selectedDashboard === 'citizen' ? 'My Complaints' : 'Complaint Management'}
               </CardTitle>
-              <Button>
+              <Button onClick={handlePreviewHeaderButtonClick}>
                 <Plus className="mr-2 h-4 w-4" />
                 {selectedDashboard === 'citizen' ? 'New Complaint' : 'View Analytics'}
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card className="bg-blue-50 border-blue-200">
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {selectedDashboard === 'citizen' ? '5' : '847'}
+                {!user ? (
+                    <div className="text-center py-12 text-gray-500">
+                        <p>Please log in to see your dashboard stats.</p>
+                        <Button className="mt-4" onClick={() => navigate('/auth')}>Login</Button>
                     </div>
-                    <div className="text-sm text-blue-700">
-                      {selectedDashboard === 'citizen' ? 'Total Complaints' : 'Total Active'}
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <Card className="bg-blue-50 border-blue-200"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-blue-600">{dashboardLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : dashboardStats?.total}</div><div className="text-sm text-blue-700">{selectedDashboard === 'citizen' ? 'Total Complaints' : 'Total Active'}</div></CardContent></Card>
+                        <Card className="bg-yellow-50 border-yellow-200"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-yellow-600">{dashboardLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : dashboardStats?.inProgressOrUrgent}</div><div className="text-sm text-yellow-700">{selectedDashboard === 'citizen' ? 'In Progress' : 'Urgent'}</div></CardContent></Card>
+                        <Card className="bg-green-50 border-green-200"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-green-600">{dashboardLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : dashboardStats?.resolved}</div><div className="text-sm text-green-700">{selectedDashboard === 'citizen' ? 'Resolved' : 'Resolved Today'}</div></CardContent></Card>
+                        <Card className="bg-gray-50 border-gray-200"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-gray-600">{dashboardLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : `${(dashboardStats?.avgDays ?? 0).toFixed(1)} days`}</div><div className="text-sm text-gray-700">Avg Days</div></CardContent></Card>
                     </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-yellow-50 border-yellow-200">
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-yellow-600">
-                      {selectedDashboard === 'citizen' ? '2' : '23'}
-                    </div>
-                    <div className="text-sm text-yellow-700">
-                      {selectedDashboard === 'citizen' ? 'In Progress' : 'Urgent'}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-green-50 border-green-200">
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {selectedDashboard === 'citizen' ? '3' : '34'}
-                    </div>
-                    <div className="text-sm text-green-700">
-                      {selectedDashboard === 'citizen' ? 'Resolved' : 'Resolved Today'}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gray-50 border-gray-200">
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-gray-600">
-                      {selectedDashboard === 'citizen' ? '4.2' : '3.8'}
-                    </div>
-                    <div className="text-sm text-gray-700">Avg Days</div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div className="text-center py-8 text-gray-500">
-                <p>Dashboard preview - {selectedDashboard === 'citizen' ? 'Login to view your complaints' : 'Login as official to manage complaints'}</p>
-              </div>
+                )}
             </CardContent>
           </Card>
         </div>
       </section>
 
-      {/* AI Features Section */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -294,7 +251,6 @@ export default function HomePage() {
               Advanced machine learning algorithms working behind the scenes to improve efficiency and citizen experience.
             </p>
           </div>
-
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {aiFeatures.map((feature, index) => (
               <Card key={index} className="bg-gradient-to-br from-white to-gray-100">
@@ -303,23 +259,21 @@ export default function HomePage() {
                     <div className="w-12 h-12 bg-white bg-opacity-80 rounded-lg flex items-center justify-center mb-4">
                       <feature.icon size={20} className="text-gray-700" />
                     </div>
-
                     <div className="mb-4 min-h-[100px]">
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
                       <p className="text-gray-600 text-sm">{feature.description}</p>
                     </div>
                   </div>
-
                   <Card className="bg-white mt-auto">
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between mb-2 text-xs">
                         <span className="text-gray-600">Accuracy Rate</span>
-                        <span className="font-semibold text-gray-800">{feature.accuracy}</span>
+                        <span className="font-semibold text-gray-800">{aiLoading ? '--' : `${feature.value}%`}</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-1.5">
-                        <div
-                          className="bg-blue-400 h-1.5 rounded-full transition-all duration-500"
-                          style={{ width: `${parseInt(feature.accuracy)}%` }}
+                        <div 
+                          className="bg-blue-400 h-1.5 rounded-full transition-all duration-500" 
+                          style={{ width: aiLoading ? '0%' : `${feature.value}%` }}
                         ></div>
                       </div>
                     </CardContent>
