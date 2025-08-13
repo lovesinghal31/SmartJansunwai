@@ -38,6 +38,9 @@ export interface IStorage {
     byCategory: Record<string, number>;
     byPriority: Record<string, number>;
   }>;
+  getDepartmentPerformance(): Promise<any[]>;
+  getComplaintTrends(timeRange: string): Promise<any[]>;
+  getAnalyticsSummary(): Promise<any>;
 
   // Department methods
   getAllDepartments(): Promise<Department[]>;
@@ -304,6 +307,93 @@ export class MongoStorage implements IStorage {
 
     console.log("Storage: Calculated stats:", stats);
     return stats;
+  }
+
+  async getDepartmentPerformance(): Promise<any[]> {
+    const db = await this.ensureConnection();
+    const complaints = await db.collection('complaints').find({}).toArray();
+    const departments = await db.collection('departments').find({ isActive: true }).toArray();
+    
+    const performance = departments.map(dept => {
+      const deptComplaints = complaints.filter(c => c.category === dept.name || c.category === dept.slug);
+      const resolved = deptComplaints.filter(c => c.status === 'resolved');
+      const avgTime = deptComplaints.length > 0 
+        ? deptComplaints.reduce((acc, c) => {
+            if (c.status === 'resolved' && c.createdAt && c.updatedAt) {
+              const days = Math.ceil((new Date(c.updatedAt).getTime() - new Date(c.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+              return acc + days;
+            }
+            return acc + 3; // default 3 days if no resolution time
+          }, 0) / deptComplaints.length
+        : 3;
+      
+      return {
+        name: dept.name,
+        complaints: deptComplaints.length,
+        resolved: resolved.length,
+        avgTime: Math.round(avgTime * 10) / 10,
+        satisfaction: 4.0 + (Math.random() * 0.6) // Mock satisfaction for now
+      };
+    });
+    
+    return performance;
+  }
+
+  async getComplaintTrends(timeRange: string): Promise<any[]> {
+    const db = await this.ensureConnection();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    // Get last 6 months of data
+    const trends = [];
+    const today = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const nextMonth = new Date(today.getFullYear(), today.getMonth() - i + 1, 1);
+      
+      const complaints = await db.collection('complaints').find({
+        createdAt: {
+          $gte: date.toISOString(),
+          $lt: nextMonth.toISOString()
+        }
+      }).toArray();
+      
+      const resolved = complaints.filter(c => c.status === 'resolved');
+      
+      trends.push({
+        month: months[date.getMonth()],
+        complaints: complaints.length,
+        resolved: resolved.length,
+        satisfaction: 4.0 + (Math.random() * 0.4) // Mock satisfaction
+      });
+    }
+    
+    return trends;
+  }
+
+  async getAnalyticsSummary(): Promise<any> {
+    const db = await this.ensureConnection();
+    const complaints = await db.collection('complaints').find({}).toArray();
+    const resolved = complaints.filter(c => c.status === 'resolved');
+    
+    // Calculate average resolution time
+    const avgResolutionTime = resolved.length > 0 
+      ? resolved.reduce((acc, c) => {
+          if (c.createdAt && c.updatedAt) {
+            const days = Math.ceil((new Date(c.updatedAt).getTime() - new Date(c.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+            return acc + days;
+          }
+          return acc + 3;
+        }, 0) / resolved.length
+      : 3;
+    
+    return {
+      totalComplaints: complaints.length,
+      resolvedComplaints: resolved.length,
+      averageResolutionTime: Math.round(avgResolutionTime * 10) / 10,
+      citizenSatisfaction: 4.0 + (Math.random() * 0.5), // Mock for now
+      resolutionRate: complaints.length > 0 ? Math.round((resolved.length / complaints.length) * 100) : 0
+    };
   }
 
   // Department methods

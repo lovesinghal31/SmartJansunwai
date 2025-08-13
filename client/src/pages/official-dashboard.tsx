@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import Header from "@/components/header";
@@ -23,7 +23,64 @@ interface ComplaintStats {
   byPriority: Record<string, number>;
 }
 
+// Type for category fetched from backend
+interface CategoryOption {
+  name: string;
+  id: string;
+  slug: string;
+}
+
+// Type for status options from backend
+interface StatusOption {
+  value: string;
+  label: string;
+  displayLabel: string;
+}
+
 export default function OfficialDashboard() {
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  
+  const [statusOptions, setStatusOptions] = useState<StatusOption[]>([]);
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
+      try {
+        const res = await fetch("/api/categories");
+        if (!res.ok) throw new Error("Failed to fetch categories");
+        const data = await res.json();
+        setCategories(data);
+      } catch (err: any) {
+        setCategoriesError(err.message || "Unknown error");
+      } finally {
+        setCategoriesLoading(false);
+      }
+    }
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    async function fetchStatusOptions() {
+      setStatusLoading(true);
+      setStatusError(null);
+      try {
+        const res = await fetch("/api/status-options");
+        if (!res.ok) throw new Error("Failed to fetch status options");
+        const data = await res.json();
+        setStatusOptions(data);
+      } catch (err: any) {
+        setStatusError(err.message || "Unknown error");
+      } finally {
+        setStatusLoading(false);
+      }
+    }
+    fetchStatusOptions();
+  }, []);
   const { user, accessToken } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
@@ -304,28 +361,28 @@ export default function OfficialDashboard() {
               </div>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-full lg:w-48">
-                  <SelectValue placeholder="All Categories" />
+                  <SelectValue placeholder={categoriesLoading ? "Loading..." : "All Categories"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="road-transportation">Road & Transportation</SelectItem>
-                  <SelectItem value="water-supply">Water Supply</SelectItem>
-                  <SelectItem value="electricity">Electricity</SelectItem>
-                  <SelectItem value="sanitation">Sanitation</SelectItem>
-                  <SelectItem value="street-lighting">Street Lighting</SelectItem>
-                  <SelectItem value="parks-recreation">Parks & Recreation</SelectItem>
+                  {categoriesLoading && <div className="p-2 text-gray-500">Loading...</div>}
+                  {categoriesError && <div className="p-2 text-red-500">{categoriesError}</div>}
+                  {!categoriesLoading && !categoriesError && categories.map((cat) => (
+                    <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full lg:w-48">
-                  <SelectValue placeholder="All Status" />
+                  <SelectValue placeholder={statusLoading ? "Loading..." : "All Status"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="submitted">New</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
-                  <SelectItem value="under-review">Under Review</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
+                  {statusLoading && <div className="p-2 text-gray-500">Loading...</div>}
+                  {statusError && <div className="p-2 text-red-500">{statusError}</div>}
+                  {!statusLoading && !statusError && statusOptions.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>{status.displayLabel}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -467,9 +524,9 @@ export default function OfficialDashboard() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">No status change</SelectItem>
-                          <SelectItem value="in-progress">In Progress</SelectItem>
-                          <SelectItem value="under-review">Under Review</SelectItem>
-                          <SelectItem value="resolved">Resolved</SelectItem>
+                          {statusOptions.map((status) => (
+                            <SelectItem key={status.value} value={status.value}>{status.displayLabel}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

@@ -21,6 +21,52 @@ declare global {
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
+  // Public endpoint for categories (departments)
+  app.get("/api/categories", async (req, res) => {
+    try {
+      const departments = await storage.getAllDepartments();
+      // Only return active departments and map to { name, id, slug }
+      const categories = departments.filter(d => d.isActive !== false).map(d => ({
+        name: d.name,
+        id: d.id,
+        slug: d.name.toLowerCase().replace(/ /g, '-'),
+      }));
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get categories" });
+    }
+  });
+
+  // Public endpoint for status options
+  app.get("/api/status-options", async (req, res) => {
+    try {
+      const statusOptions = [
+        { value: "submitted", label: "Submitted", displayLabel: "New" },
+        { value: "in-progress", label: "In Progress", displayLabel: "In Progress" },
+        { value: "under-review", label: "Under Review", displayLabel: "Under Review" },
+        { value: "resolved", label: "Resolved", displayLabel: "Resolved" }
+      ];
+      res.json(statusOptions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get status options" });
+    }
+  });
+
+  // Public endpoint for priority options
+  app.get("/api/priority-options", async (req, res) => {
+    try {
+      const priorityOptions = [
+        { value: "low", label: "Low", displayLabel: "Low" },
+        { value: "medium", label: "Medium", displayLabel: "Medium" },
+        { value: "high", label: "High", displayLabel: "High" }
+      ];
+      res.json(priorityOptions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get priority options" });
+    }
+  });
+  setupAuth(app);
+
   // Complaint routes
   app.get("/api/complaints", authenticateJWT, async (req, res) => {
     try {
@@ -191,6 +237,41 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Analytics route error:", error);
       res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  // Enhanced analytics endpoints
+  app.get("/api/analytics/department-performance", authenticateJWT, async (req, res) => {
+    if (req.user!.role !== "official" && req.user!.role !== "admin") return res.sendStatus(403);
+    try {
+      const performance = await storage.getDepartmentPerformance();
+      res.json(performance);
+    } catch (error) {
+      console.error("Department performance error:", error);
+      res.status(500).json({ message: "Failed to fetch department performance" });
+    }
+  });
+
+  app.get("/api/analytics/trends", authenticateJWT, async (req, res) => {
+    if (req.user!.role !== "official" && req.user!.role !== "admin") return res.sendStatus(403);
+    try {
+      const timeRange = req.query.timeRange as string || "30d";
+      const trends = await storage.getComplaintTrends(timeRange);
+      res.json(trends);
+    } catch (error) {
+      console.error("Trends error:", error);
+      res.status(500).json({ message: "Failed to fetch trends" });
+    }
+  });
+
+  app.get("/api/analytics/summary", authenticateJWT, async (req, res) => {
+    if (req.user!.role !== "official" && req.user!.role !== "admin") return res.sendStatus(403);
+    try {
+      const summary = await storage.getAnalyticsSummary();
+      res.json(summary);
+    } catch (error) {
+      console.error("Analytics summary error:", error);
+      res.status(500).json({ message: "Failed to fetch analytics summary" });
     }
   });
 

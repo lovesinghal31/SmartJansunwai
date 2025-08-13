@@ -17,6 +17,13 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Filter } from "lucide-react";
 import type { Complaint, Notification } from "@shared/schema";
 
+// Type for status options from backend
+interface StatusOption {
+  value: string;
+  label: string;
+  displayLabel: string;
+}
+
 export default function CitizenDashboard() {
   const { user, accessToken } = useAuth();
   const { toast } = useToast();
@@ -25,6 +32,28 @@ export default function CitizenDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showComplaintForm, setShowComplaintForm] = useState(false);
+  
+  const [statusOptions, setStatusOptions] = useState<StatusOption[]>([]);
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchStatusOptions() {
+      setStatusLoading(true);
+      setStatusError(null);
+      try {
+        const res = await fetch("/api/status-options");
+        if (!res.ok) throw new Error("Failed to fetch status options");
+        const data = await res.json();
+        setStatusOptions(data);
+      } catch (err: any) {
+        setStatusError(err.message || "Unknown error");
+      } finally {
+        setStatusLoading(false);
+      }
+    }
+    fetchStatusOptions();
+  }, []);
 
   const { data: complaints = [], isLoading, refetch } = useQuery<Complaint[]>({
     queryKey: ["/api/complaints"],
@@ -163,14 +192,15 @@ export default function CitizenDashboard() {
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-48">
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Filter by status" />
+                  <SelectValue placeholder={statusLoading ? "Loading..." : "Filter by status"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="submitted">Submitted</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
-                  <SelectItem value="under-review">Under Review</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
+                  {statusLoading && <div className="p-2 text-gray-500">Loading...</div>}
+                  {statusError && <div className="p-2 text-red-500">{statusError}</div>}
+                  {!statusLoading && !statusError && statusOptions.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>{status.displayLabel}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

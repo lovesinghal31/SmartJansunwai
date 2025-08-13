@@ -1,4 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+// Type for category fetched from backend
+interface CategoryOption {
+  name: string;
+  id: string;
+  slug: string;
+}
 import { useForm, SubmitHandler, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,6 +41,27 @@ interface AIAnalysisResult {
 }
 
 export default function AIComplaintForm() {
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
+      try {
+        const res = await fetch("/api/categories");
+        if (!res.ok) throw new Error("Failed to fetch categories");
+        const data = await res.json();
+        setCategories(data);
+      } catch (err: any) {
+        setCategoriesError(err.message || "Unknown error");
+      } finally {
+        setCategoriesLoading(false);
+      }
+    }
+    fetchCategories();
+  }, []);
   const [formStep, setFormStep] = useState<'initial' | 'preview' | 'submitted' | 'editing'>('initial');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isLocationLoading, setIsLocationLoading] = useState(false);
@@ -77,37 +104,68 @@ export default function AIComplaintForm() {
   // --- AI ANALYSIS FUNCTION ---
   const handleAnalyzeComplaint: SubmitHandler<ComplaintFormData> = async (data) => {
     setIsAiLoading(true);
+    // Check if categories have loaded
+    if (categoriesLoading) {
+      toast({ title: "Please wait", description: "Categories are still loading. Please try again in a moment.", variant: "default" });
+      return;
+    }
+
+    if (categories.length === 0) {
+      toast({ title: "No categories available", description: "Categories could not be loaded. Please refresh the page.", variant: "destructive" });
+      return;
+    }
+
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    console.log("API Key available:", !!apiKey); // Debug log
     if (!apiKey) {
-      toast({ title: "Configuration Error", description: "Gemini API key is not configured.", variant: "destructive" });
+      toast({ title: "Configuration Error", description: "AI service is not properly configured. Please contact administrator.", variant: "destructive" });
       setIsAiLoading(false);
       return;
     }
+
+    // Get available categories for the AI prompt
+    const categoryNames = categories.map(cat => cat.name).join(' | ');
 
     const prompt = `Analyze the following civic complaint. Based on the title and description, determine if it is a valid, genuine complaint or just random characters/gibberish. Also determine the correct category, priority, and estimated resolution time.
       User's chosen category: "${data.category}"
       Complaint Title: "${data.title}"
       Complaint Description: "${data.description}"
       
+      Available categories: ${categoryNames}
+      
       Respond ONLY with a valid JSON object with the following structure:
       {
         "priority": "Low" | "Medium" | "High",
         "isComplaintValid": boolean,
-        "suggestedCategory": "Water Supply" | "Roads & Transportation" | "Electricity" | "Sanitation" | "Street Lighting" | "Parks & Recreation",
+        "suggestedCategory": string (must be one of the available categories),
         "estimatedResolutionDays": integer between 1 and 14
       }`;
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
+      console.log("Making AI API request..."); // Debug log
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
       });
 
-      if (!response.ok) throw new Error("AI API request failed");
+      console.log("AI API response status:", response.status); // Debug log
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("AI API error:", errorText); // Debug log
+        throw new Error(`AI API request failed with status ${response.status}: ${errorText}`);
+      }
       
       const result = await response.json();
+      console.log("AI API result:", result); // Debug log
+      
+      if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
+        throw new Error("Invalid AI response format");
+      }
+      
       const aiResponseText = result.candidates[0].content.parts[0].text;
+      console.log("AI response text:", aiResponseText); // Debug log
+      
       const parsedAiResult: AIAnalysisResult = JSON.parse(aiResponseText.replace(/```json|```/g, '').trim());
 
       if (!parsedAiResult.isComplaintValid) {
@@ -127,7 +185,26 @@ export default function AIComplaintForm() {
 
     } catch (error) {
       console.error("AI Analysis Error:", error);
-      toast({ title: "AI Analysis Failed", description: "Could not analyze the complaint. Please try again.", variant: "destructive" });
+      
+      // Provide more specific error messages
+      let errorMessage = "Could not analyze the complaint. Please try again.";
+      if (error instanceof Error) {
+        if (error.message.includes("quota")) {
+          errorMessage = "AI service quota exceeded. Please try again later.";
+        } else if (error.message.includes("401") || error.message.includes("403")) {
+          errorMessage = "AI service authentication failed. Please contact administrator.";
+        } else if (error.message.includes("network") || error.message.includes("fetch")) {
+          errorMessage = "Network error. Please check your internet connection.";
+        } else if (error.message.includes("JSON")) {
+          errorMessage = "AI response format error. Please try again.";
+        }
+      }
+      
+      toast({ 
+        title: "AI Analysis Failed", 
+        description: errorMessage, 
+        variant: "destructive" 
+      });
     } finally {
       setIsAiLoading(false);
     }
@@ -139,17 +216,13 @@ export default function AIComplaintForm() {
       toast({ title: "Password Required", description: "Please create a password to secure your complaint.", variant: "destructive" });
       return;
     }
-    // Map display category to backend enum value
-    const categoryMap: Record<string, string> = {
-      "Roads & Transportation": "road-transportation",
-      "Water Supply": "water-supply",
-      "Electricity": "electricity",
-      "Sanitation": "sanitation",
-      "Street Lighting": "street-lighting",
-      "Parks & Recreation": "parks-recreation",
-    };
+    
     const values = getValues();
-    const backendCategory = categoryMap[values.category] || values.category.toLowerCase().replace(/ /g, '-');
+    
+    // Find the matching category slug from the backend data
+    const selectedCategory = categories.find(cat => cat.name === values.category);
+    const backendCategory = selectedCategory?.slug || values.category.toLowerCase().replace(/ /g, '-');
+    
     const finalData = {
       ...values,
       category: backendCategory,
@@ -295,14 +368,13 @@ export default function AIComplaintForm() {
         control={control}
         render={({ field }) => (
           <Select onValueChange={field.onChange} value={field.value}>
-            <SelectTrigger><SelectValue placeholder="Select Complaint Category" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={categoriesLoading ? "Loading..." : "Select Complaint Category"} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="Water Supply">Water Supply</SelectItem>
-              <SelectItem value="Roads & Transportation">Roads & Transportation</SelectItem>
-              <SelectItem value="Electricity">Electricity</SelectItem>
-              <SelectItem value="Sanitation">Sanitation</SelectItem>
-              <SelectItem value="Street Lighting">Street Lighting</SelectItem>
-              <SelectItem value="Parks & Recreation">Parks & Recreation</SelectItem>
+              {categoriesLoading && <div className="p-2 text-gray-500">Loading...</div>}
+              {categoriesError && <div className="p-2 text-red-500">{categoriesError}</div>}
+              {!categoriesLoading && !categoriesError && categories.map((cat) => (
+                <SelectItem key={cat.slug} value={cat.name}>{cat.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         )}
