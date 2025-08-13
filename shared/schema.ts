@@ -15,16 +15,17 @@ export interface User {
 }
 
 export interface Complaint {
+  name: string;
+  contact: string;
   _id?: ObjectId;
   id: string;
   citizenId: string;
   title: string;
   description: string;
-  category: string;
+  category: string; // canonical slug, e.g. "water-supply"
   location: string;
   priority: string; // low, medium, high
   status: string; // submitted, in-progress, under-review, resolved
-  assignedTo?: string;
   attachments?: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -107,7 +108,29 @@ export interface AuditLog {
   createdAt: Date;
 }
 
+// --- FIX: Define and export the status types ---
+export const COMPLAINT_STATUSES = [
+  "submitted",
+  "in-progress",
+  "under-review",
+  "resolved",
+  "rejected", // Added rejected for completeness
+] as const;
+
+export const complaintStatusSchema = z.enum(COMPLAINT_STATUSES);
+
 // Zod Insert Schemas
+// Canonical complaint category slugs used ACROSS the system (UI, API, DB)
+export const CATEGORIES = [
+  "road-transportation",
+  "water-supply",
+  "electricity",
+  "sanitation",
+  "street-lighting",
+  "parks-recreation",
+] as const;
+
+export type Category = typeof CATEGORIES[number];
 export const insertUserSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(6),
@@ -117,13 +140,24 @@ export const insertUserSchema = z.object({
   phone: z.string().optional(),
 });
 
+// --- FIX: Update the insertComplaintSchema to use the new status schema ---
 export const insertComplaintSchema = z.object({
+  name: z.string().min(3, "Name is required"),
+  contact: z.string().min(10, "A valid contact number is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   title: z.string().min(1),
   description: z.string().min(1),
-  category: z.string().min(1),
+  category: z.enum(CATEGORIES as unknown as [string, ...string[]]),
   location: z.string().min(1),
   priority: z.string().default("medium"),
+  status: complaintStatusSchema.default("submitted"), // Use the new schema here
   attachments: z.array(z.string()).optional(),
+  aiAnalysis: z.object({
+    priority: z.string().optional(),
+    isComplaintValid: z.boolean().optional(),
+    suggestedCategory: z.string().optional(),
+    estimatedResolutionDays: z.number().optional(),
+  }).optional(),
 });
 
 export const insertComplaintUpdateSchema = z.object({
@@ -189,3 +223,4 @@ export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type InsertSlaSettings = z.infer<typeof insertSlaSettingsSchema>;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type ComplaintStatus = z.infer<typeof complaintStatusSchema>;
