@@ -15,6 +15,8 @@ export interface User {
 }
 
 export interface Complaint {
+  name: string;
+  contact: string;
   _id?: ObjectId;
   id: string;
   citizenId: string;
@@ -106,6 +108,17 @@ export interface AuditLog {
   createdAt: Date;
 }
 
+// --- FIX: Define and export the status types ---
+export const COMPLAINT_STATUSES = [
+  "submitted",
+  "in-progress",
+  "under-review",
+  "resolved",
+  "rejected", // Added rejected for completeness
+] as const;
+
+export const complaintStatusSchema = z.enum(COMPLAINT_STATUSES);
+
 // Zod Insert Schemas
 // Canonical complaint category slugs used ACROSS the system (UI, API, DB)
 export const CATEGORIES = [
@@ -127,6 +140,7 @@ export const insertUserSchema = z.object({
   phone: z.string().optional(),
 });
 
+// --- FIX: Update the insertComplaintSchema to use the new status schema ---
 export const insertComplaintSchema = z.object({
   name: z.string().min(3, "Name is required"),
   contact: z.string().min(10, "A valid contact number is required"),
@@ -136,7 +150,7 @@ export const insertComplaintSchema = z.object({
   category: z.string().min(1, "Category is required"), // Changed from enum to string
   location: z.string().min(1),
   priority: z.string().default("medium"),
-  status: z.enum(["submitted", "in-progress", "under-review", "resolved"]).default("submitted"),
+  status: complaintStatusSchema.default("submitted"), // Use the new schema here
   attachments: z.array(z.string()).optional(),
   aiAnalysis: z.object({
     priority: z.string().optional(),
@@ -209,3 +223,4 @@ export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type InsertSlaSettings = z.infer<typeof insertSlaSettingsSchema>;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type ComplaintStatus = z.infer<typeof complaintStatusSchema>;
