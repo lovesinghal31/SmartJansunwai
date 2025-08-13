@@ -15,7 +15,7 @@ import {
 // Firebase Imports for Database
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc, query, onSnapshot, orderBy } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 
 // --- Multi-language Support Setup ---
 const translations = {
@@ -34,7 +34,7 @@ const translations = {
   },
   hi: {
     smartAssistant: "स्मार्ट सहायक",
-    tagline: "शिकایات, नागरिक प्रक्रियाओं आदि के लिए तुरंत सहायता प्राप्त करें। हिंदी और अंग्रेजी में 24/7 उपलब्ध।",
+    tagline: "शिकायतों, नागरिक प्रक्रियाओं आदि के लिए तुरंत सहायता प्राप्त करें। हिंदी और अंग्रेजी में 24/7 उपलब्ध।",
     aiAssistant: "एआई सहायक",
     online: "ऑनलाइन",
     hindi: "हिंदी",
@@ -48,7 +48,7 @@ const translations = {
 };
 
 interface ChatMessage {
-  id?: string;
+  id?: string; // Firestore will generate this
   type: 'user' | 'bot';
   message: string;
   timestamp: Date;
@@ -67,6 +67,7 @@ const firebaseConfig = {
 };
 
 declare const __app_id: any;
+declare const __initial_auth_token: any;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 const app = initializeApp(firebaseConfig);
@@ -74,13 +75,13 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 export default function ChatbotPage() {
-  const { user } = useAuth();
-  const userId = user?.id;
-
+  const [userId, setUserId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
+  
+  // --- FIX: Added the missing useRef definition ---
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const t = (key: keyof typeof translations.en) => translations[language][key] || translations.en[key];
@@ -100,10 +101,33 @@ export default function ChatbotPage() {
     { title: "Department Directory", description: "Find the right department for your specific issue", icon: HelpCircle, color: "bg-purple-100 text-purple-800" },
     { title: "Emergency Procedures", description: "What to do for urgent civic issues requiring immediate attention", icon: AlertCircle, color: "bg-red-100 text-red-800" }
   ];
+
+  useEffect(() => {
+    const authUnsubscribe = onAuthStateChanged(auth, async (user) => {
+      let currentUserId;
+      if (user) {
+        currentUserId = user.uid;
+      } else {
+        const anonymousUser = await signInAnonymously(auth);
+        currentUserId = anonymousUser.user.uid;
+      }
+      setUserId(currentUserId);
+    });
+
+    if (typeof __initial_auth_token !== 'undefined' && auth.currentUser === null) {
+      signInWithCustomToken(auth, __initial_auth_token).catch(error => {
+        console.error("Custom token sign-in failed:", error);
+        signInAnonymously(auth);
+      });
+    } else if (auth.currentUser === null) {
+      signInAnonymously(auth);
+    }
+    
+    return () => authUnsubscribe();
+  }, []);
   
   useEffect(() => {
     if (!userId) return;
-    console.log(`DEBUG: Setting up Firestore listener for userId: ${userId}`);
 
     const chatHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
     const q = query(chatHistoryCollection, orderBy("timestamp", "asc"));
@@ -132,7 +156,7 @@ export default function ChatbotPage() {
         setMessages(fetchedMessages);
       }
     }, (error) => {
-      console.error("DEBUG: Firestore snapshot error:", error);
+      console.error("Firestore snapshot error:", error);
     });
 
     return () => dataUnsubscribe();
@@ -163,29 +187,9 @@ export default function ChatbotPage() {
       return;
     }
     
-    // --- FIX: Enhanced system prompt with specific context about the website ---
-    const systemPrompt = `You are the "Smart Jansunwai" AI Assistant for the city of Indore. Your purpose is to help users of this specific website.
-    Key features of the website you should know about:
-    - Complaint Filing: Users can submit complaints about civic issues.
-    - Status Tracking: Users can track the status of their submitted complaints.
-    - Interactive Map: A map view shows the location of various complaints.
-    - Department Directory: Information on municipal departments.
-    Your role is to answer questions strictly related to these features and other civic issues in Indore. If a user asks a question outside of this domain (e.g., about movies, celebrities, general knowledge), you must politely decline to answer and guide them back to relevant topics.
-    Answer the following user query in ${language === 'hi' ? 'Hindi' : 'English'}.`;
+    const systemPrompt = `You are the Jansunwai AI Assistant for the city of Indore. Your role is to answer questions strictly related to civic issues, public complaints, government processes, and municipal services for Indore. If a user asks a question outside of this domain (e.g., about movies, celebrities, general knowledge, or personal opinions), you must politely decline to answer and guide them back to relevant topics. Answer the following user query in ${language === 'hi' ? 'Hindi' : 'English'}: "${userInput}"`;
 
-    // --- FIX: Include previous messages for conversational context ---
-    const conversationHistory = messages.slice(-6).map(msg => ({
-      role: msg.type === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.message }]
-    }));
-
-    const payload = { 
-      contents: [
-        ...conversationHistory,
-        { role: "user", parts: [{ text: systemPrompt + `\n\nUser Question: "${userInput}"` }] }
-      ]
-    };
-
+    const payload = { contents: [{ role: "user", parts: [{ text: systemPrompt }] }] };
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
     try {
@@ -215,7 +219,7 @@ export default function ChatbotPage() {
       }
 
     } catch (error) {
-      console.error("DEBUG: Error fetching AI response:", error);
+      console.error("Error fetching AI response:", error);
       const errorMessage: ChatMessage = {
         type: 'bot',
         message: "There was an error connecting to the AI service. Please try again later.",
@@ -259,7 +263,7 @@ export default function ChatbotPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-4">

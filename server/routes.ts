@@ -24,20 +24,28 @@ export function registerRoutes(app: Express): Server {
   // Complaint routes
   app.get("/api/complaints", authenticateJWT, async (req, res) => {
     try {
-      console.log("Complaints route called - User:", req.user);
-      console.log("Complaints route - User role:", req.user?.role);
-      
       let complaints;
       if (req.user!.role === "citizen") {
         complaints = await storage.getComplaintsByUser(req.user!.id);
+      } else if (req.user!.role === "official") {
+        // Use the official's department value directly as the complaint category (canonical slug)
+        const user = await storage.getUser(req.user!.id);
+        console.log("Official user:", user);
+        if (!user || !user.department) {
+          return res.status(403).json({ message: "Official does not have a department assigned" });
+        }
+        const category = user.department;
+        console.log("Looking for complaints with category:", category);
+        const allComplaints = await storage.getAllComplaints();
+        console.log("All complaints:", allComplaints.map(c => ({ title: c.title, category: c.category })));
+        complaints = allComplaints.filter((c) => c.category === category);
+        console.log("Filtered complaints for official:", complaints.length);
       } else {
+        // Admins see all complaints
         complaints = await storage.getAllComplaints();
       }
-      
-      console.log("Complaints route - Returning complaints:", complaints.length);
       res.json(complaints);
     } catch (error) {
-      console.error("Complaints route error:", error);
       res.status(500).json({ message: "Failed to fetch complaints" });
     }
   });
@@ -45,6 +53,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/complaints/:id", authenticateJWT, async (req, res) => {
     try {
       const complaint = await storage.getComplaint(req.params.id);
+      
       if (!complaint) return res.status(404).json({ message: "Complaint not found" });
       // Citizens can only view their own complaints
       if (req.user!.role === "citizen" && complaint.citizenId !== req.user!.id) {
@@ -372,6 +381,15 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: result.error.issues });
       }
       const notification = await storage.createNotification(result.data);
+      // Emit real-time notification to user
+      try {
+        // require("./socket").sendNotificationToUser(result.data.userId, notification);
+        import("./socket").then((socketModule) => {
+  socketModule.default.sendNotificationToUser(result.data.userId, notification);
+})
+      } catch (e) {
+        console.error("Socket notification emit error:", e);
+      }
       res.status(201).json(notification);
     } catch (error) {
       res.status(500).json({ error: "Failed to create notification" });
