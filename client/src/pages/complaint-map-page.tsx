@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,20 @@ interface MapComplaint extends Complaint {
   coordinates: { lat: number; lng: number };
   wardNumber: number;
   landmark: string;
+}
+
+// Type for category fetched from backend
+interface CategoryOption {
+  name: string;
+  id: string;
+  slug: string;
+}
+
+// Type for status options from backend
+interface StatusOption {
+  value: string;
+  label: string;
+  displayLabel: string;
 }
 
 const getLeafletIcon = (category: string) => {
@@ -89,42 +104,67 @@ const MapAutoFitter = ({ complaints }: { complaints: MapComplaint[] }) => {
 
 
 export default function ComplaintMapPage() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedWard, setSelectedWard] = useState("all");
   const [searchLocation, setSearchLocation] = useState("");
 
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  
+  const [statusOptions, setStatusOptions] = useState<StatusOption[]>([]);
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
+      try {
+        const res = await fetch("/api/categories");
+        if (!res.ok) throw new Error("Failed to fetch categories");
+        const data = await res.json();
+        setCategories(data);
+      } catch (err: any) {
+        setCategoriesError(err.message || "Unknown error");
+      } finally {
+        setCategoriesLoading(false);
+      }
+    }
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    async function fetchStatusOptions() {
+      setStatusLoading(true);
+      setStatusError(null);
+      try {
+        const res = await fetch("/api/status-options");
+        if (!res.ok) throw new Error("Failed to fetch status options");
+        const data = await res.json();
+        setStatusOptions(data);
+      } catch (err: any) {
+        setStatusError(err.message || "Unknown error");
+      } finally {
+        setStatusLoading(false);
+      }
+    }
+    fetchStatusOptions();
+  }, []);
+
   const { data: complaintsFromApi = [], isLoading } = useQuery<MapComplaint[]>({
     queryKey: ["complaints"],
     queryFn: async () => {
-      return new Promise(resolve => setTimeout(() => resolve(mapComplaints), 1000));
+      const res = await apiRequest("GET", "/api/complaints", undefined, accessToken);
+      return res.json();
     },
-    enabled: !!user,
+    enabled: !!user && !!accessToken,
   });
 
-  const mapComplaints: MapComplaint[] = [
-    {
-      id: "1", citizenId: "user1", title: "Pothole on MG Road", description: "Large pothole causing traffic issues",
-      category: "road-transportation", location: "MG Road, near Palasia Square", priority: "high", status: "in-progress", // type: string
-      assignedTo: undefined, attachments: undefined, createdAt: new Date("2024-01-15"), updatedAt: new Date("2024-01-16"),
-      coordinates: { lat: 22.7196, lng: 75.8577 }, wardNumber: 12, landmark: "Palasia Square"
-    },
-    {
-      id: "2", citizenId: "user2", title: "Water supply disruption", description: "No water supply for 3 days",
-      category: "water-supply", location: "Vijay Nagar, Sector 1", priority: "high", status: "submitted",
-      assignedTo: undefined, attachments: undefined, createdAt: new Date("2024-01-14"), updatedAt: new Date("2024-01-14"),
-      coordinates: { lat: 22.7532, lng: 75.8937 }, wardNumber: 8, landmark: "Vijay Nagar Main Road"
-    },
-    {
-      id: "3", citizenId: "user3", title: "Street light not working", description: "Street light pole #SL-456 not functioning",
-      category: "street-lighting", location: "AB Road, near Geeta Bhawan", priority: "medium", status: "resolved",
-      assignedTo: undefined, attachments: undefined, createdAt: new Date("2024-01-10"), updatedAt: new Date("2024-01-12"),
-      coordinates: { lat: 22.7074, lng: 75.8723 }, wardNumber: 15, landmark: "Geeta Bhawan"
-    },
-  ];
-
-  const complaintsToDisplay = complaintsFromApi.length > 0 ? complaintsFromApi : mapComplaints;
+  // Use API data directly - no fallback to mock data
+  const complaintsToDisplay = complaintsFromApi;
 
   const filteredComplaints = complaintsToDisplay.filter(complaint => {
     const matchesCategory = selectedCategory === "all" || complaint.category === selectedCategory;
@@ -165,7 +205,6 @@ export default function ComplaintMapPage() {
 
         <div className="grid lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1 space-y-6">
-            {/* --- FIX: Live Statistics Card RESTORED --- */}
             <Card>
               <CardHeader><CardTitle className="text-lg">Live Statistics</CardTitle></CardHeader>
               <CardContent>
@@ -209,28 +248,28 @@ export default function ComplaintMapPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Category</label>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={categoriesLoading ? "Loading..." : "All Categories"} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="road-transportation">Roads & Transportation</SelectItem>
-                      <SelectItem value="water-supply">Water Supply</SelectItem>
-                      <SelectItem value="electricity">Electricity</SelectItem>
-                      <SelectItem value="sanitation">Sanitation</SelectItem>
-                      <SelectItem value="street-lighting">Street Lighting</SelectItem>
-                      <SelectItem value="parks-recreation">Parks & Recreation</SelectItem>
+                      {categoriesLoading && <div className="p-2 text-gray-500">Loading...</div>}
+                      {categoriesError && <div className="p-2 text-red-500">{categoriesError}</div>}
+                      {!categoriesLoading && !categoriesError && categories.map((cat) => (
+                        <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
                   <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger><SelectValue placeholder="All Status" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={statusLoading ? "Loading..." : "All Status"} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="submitted">New</SelectItem>
-                      <SelectItem value="in-progress">In Progress</SelectItem>
-                      <SelectItem value="under-review">Under Review</SelectItem>
-                      <SelectItem value="resolved">Resolved</SelectItem>
+                      {statusLoading && <div className="p-2 text-gray-500">Loading...</div>}
+                      {statusError && <div className="p-2 text-red-500">{statusError}</div>}
+                      {!statusLoading && !statusError && statusOptions.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>{status.displayLabel}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -249,7 +288,6 @@ export default function ComplaintMapPage() {
               </CardContent>
             </Card>
 
-            {/* --- FIX: Quick Actions Card RESTORED --- */}
             <Card>
               <CardHeader><CardTitle className="text-lg">Quick Actions</CardTitle></CardHeader>
               <CardContent className="space-y-2">
@@ -266,7 +304,8 @@ export default function ComplaintMapPage() {
             </Card>
           </div>
 
-          <div className="lg:col-span-3">
+          {/* --- FIX: The right column now contains the map AND the ward stats --- */}
+          <div className="lg:col-span-3 space-y-6">
             <Card className="h-[700px] overflow-hidden">
               <CardHeader className="border-b">
                 <div className="flex items-center justify-between">
@@ -314,25 +353,26 @@ export default function ComplaintMapPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* --- FIX: Ward-wise stats card is now here, below the map --- */}
+            <Card>
+              <CardHeader><CardTitle>Ward-wise Complaint Distribution</CardTitle></CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {Object.entries(wardStats).map(([ward, count]) => (
+                    <div key={ward} className="text-center p-3 bg-gray-50 rounded-lg">
+                      <div className="text-lg font-bold text-gray-900">Ward {ward}</div>
+                      <div className="text-sm text-gray-600">{count as number} complaints</div>
+                      <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div className="bg-primary-600 h-2 rounded-full" style={{ width: `${((count as number) / Math.max(...Object.values(wardStats))) * 100}%` }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
-
-        <Card className="mt-6">
-          <CardHeader><CardTitle>Ward-wise Complaint Distribution</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {Object.entries(wardStats).map(([ward, count]) => (
-                <div key={ward} className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-lg font-bold text-gray-900">Ward {ward}</div>
-                  <div className="text-sm text-gray-600">{count as number} complaints</div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div className="bg-primary-600 h-2 rounded-full" style={{ width: `${((count as number) / Math.max(...Object.values(wardStats))) * 100}%` }}></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Footer />

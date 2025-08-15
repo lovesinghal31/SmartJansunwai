@@ -1147,16 +1147,18 @@ export default function AdminDashboard() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Department (For Officials)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value || "none"}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select department" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
-                        {departments.map((dept: any) => (
-                          <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.slug || dept.id}>
+                            {dept.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

@@ -16,6 +16,7 @@ import AnalyticsPage from "@/pages/analytics-page";
 import FeaturesPage from "@/pages/features-page";
 import FeedbackPage from "@/pages/feedback-page";
 import NotFound from "@/pages/not-found";
+import TrackComplaintPage from "@/components/track-complaint"; 
 import SettingsPage from "@/pages/setting";
 
 function AppRouter() {
@@ -23,6 +24,7 @@ function AppRouter() {
     <Router> 
       <Routes>
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+        <Route path="/track-complaint" element={<ProtectedRoute><TrackComplaintPage /></ProtectedRoute>} />
         <Route path="/citizen-dashboard" element={<ProtectedRoute><CitizenDashboard /></ProtectedRoute>} />
         <Route path="/official-dashboard" element={<ProtectedRoute><OfficialDashboard /></ProtectedRoute>} />
         <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
