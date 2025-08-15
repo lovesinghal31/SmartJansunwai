@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import Logo from "./logo.png"; // Adjust the path as necessary
 import { useToast } from "@/hooks/use-toast";
 
 export default function Header() {
+  const navigate = useNavigate();
   const { user, logoutMutation, accessToken } = useAuth();
   const [location] = useLocation();
   const { t } = useTranslation();
@@ -147,7 +149,7 @@ export default function Header() {
                 <Link key={item.name} to={item.href}>
                   <div
                     className={`flex items-center space-x-2 px-4 py-3 rounded-md text-base font-medium transition-colors ${
-                      location.pathname === item.href
+                      location === item.href
                         ? "text-primary-600 bg-primary-50"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
@@ -194,7 +196,7 @@ export default function Header() {
                       <div className="p-4 text-center text-sm text-red-500">Failed to load.</div>
                     ) : notifications.length > 0 ? (
                       notifications.map((n: Notification) => (
-                        <div key={n.id} className={`p-3 border-b last:border-b-0 ${!n.isRead ? 'bg-blue-50' : ''}`}>
+                        <div key={n.id} className={`p-3 border-b last:border-b-0 ${!n.isRead ? 'bg-blue-50' : ''}</div>`}>
                           <div className="flex justify-between items-start">
                             <div className="flex-grow cursor-pointer" onClick={() => handleNotificationClick(n)}>
                               <p className="font-semibold text-sm">{n.title}</p>
@@ -240,10 +242,11 @@ export default function Header() {
                         Dashboard
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/setting")}>
                       <Settings size={16} className="mr-2" />
                       Settings
                     </DropdownMenuItem>
+
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
                       <LogOut size={16} className="mr-2" />
@@ -261,7 +264,6 @@ export default function Header() {
             )}
           </div>
         </div>
-      </div>
     </header>
   );
 }
