@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import AIComplaintForm from "@/components/ai-complaint-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { 
   Plus, 
@@ -18,12 +21,12 @@ import {
   Brain,
   BarChart3,
   Heart,
-  Loader2
+  Loader2,
+  Filter
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
-<<<<<<< HEAD
 // Type for status options from backend
 interface StatusOption {
   value: string;
@@ -31,14 +34,43 @@ interface StatusOption {
   displayLabel: string;
 }
 
+// Type definitions for API responses
+interface HomepageStats {
+  totalComplaints: number;
+  resolvedComplaints: number;
+  avgResolutionDays: number;
+}
+
+interface AiAccuracyStats {
+  classification: number;
+  prediction: number;
+  sentiment: number;
+}
+
+interface DashboardPreviewStats {
+  total: number;
+  inProgressOrUrgent: number;
+  resolved: number;
+  avgDays: number;
+}
+
+interface Notification {
+  id: string;
+  message: string;
+  type: string;
+  createdAt: string;
+}
+
 export default function CitizenDashboard() {
   const { user, accessToken } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const lastNotificationId = useRef<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showComplaintForm, setShowComplaintForm] = useState(false);
+  const [selectedDashboard, setSelectedDashboard] = useState<'citizen' | 'official'>('citizen');
   
   const [statusOptions, setStatusOptions] = useState<StatusOption[]>([]);
   const [statusLoading, setStatusLoading] = useState(true);
@@ -61,33 +93,6 @@ export default function CitizenDashboard() {
     }
     fetchStatusOptions();
   }, []);
-=======
-// Define the structure for the stats data we expect from the API
-interface HomepageStats {
-  totalComplaints: number;
-  resolvedComplaints: number;
-  avgResolutionDays: number;
-}
-
-interface AiAccuracyStats {
-    classification: number;
-    prediction: number;
-    sentiment: number;
-}
-
-// --- NEW: Define structure for the dashboard preview stats ---
-interface DashboardPreviewStats {
-    total: number;
-    inProgressOrUrgent: number;
-    resolved: number;
-    avgDays: number;
-}
-
-export default function HomePage() {
-  const { user, accessToken } = useAuth();
-  const [selectedDashboard, setSelectedDashboard] = useState<'citizen' | 'official'>('citizen');
-  const navigate = useNavigate();
->>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
 
   const { data: homepageStats, isLoading: statsLoading } = useQuery<HomepageStats>({
     queryKey: ["/api/stats/homepage"],
@@ -214,23 +219,6 @@ export default function HomePage() {
                   <div className="text-sm text-blue-100">Avg Resolution</div>
                 </div>
               </div>
-<<<<<<< HEAD
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={statusLoading ? "Loading..." : "Filter by status"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  {statusLoading && <div className="p-2 text-gray-500">Loading...</div>}
-                  {statusError && <div className="p-2 text-red-500">{statusError}</div>}
-                  {!statusLoading && !statusError && statusOptions.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>{status.displayLabel}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-=======
->>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
             </div>
 
             <Card className="bg-white shadow-2xl w-full max-w-lg mx-auto">
@@ -239,7 +227,7 @@ export default function HomePage() {
                 <CardDescription className="text-center text-gray-600">Let our AI assist you in filing your complaint.</CardDescription>
               </CardHeader>
               <CardContent className="p-8">
-                <AIComplaintForm onNavigateToTrack={() => navigate('/track-complaint')} />
+                <AIComplaintForm />
               </CardContent>
             </Card>
           </div>
