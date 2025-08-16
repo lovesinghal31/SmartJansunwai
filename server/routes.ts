@@ -4,6 +4,7 @@ import { setupAuth, authenticateJWT } from "./auth";
 import { storage } from "./storage";
 import { insertComplaintSchema, insertComplaintUpdateSchema, insertFeedbackSchema, insertDepartmentSchema, insertSlaSettingsSchema, insertNotificationSchema } from "@shared/schema";
 import { z } from "zod";
+import { handleWhatsAppMessage } from "./whatsappBot";
 
 // Extend Express Request type to include user property
 declare global {
@@ -29,7 +30,7 @@ export function registerRoutes(app: Express): Server {
       const categories = departments.filter(d => d.isActive !== false).map(d => ({
         name: d.name,
         id: d.id,
-        slug: d.name.toLowerCase().replace(/ /g, '-'),
+        slug: d.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''),
       }));
       res.json(categories);
     } catch (error) {
@@ -49,6 +50,66 @@ export function registerRoutes(app: Express): Server {
       res.json(statusOptions);
     } catch (error) {
       res.status(500).json({ error: "Failed to get status options" });
+    }
+  });
+
+  // WhatsApp webhook endpoint
+  app.post("/api/whatsapp/webhook", async (req, res) => {
+    try {
+      const { From, Body } = req.body;
+      
+      if (!From || !Body) {
+        return res.status(400).json({ error: "Missing From or Body parameter" });
+      }
+      
+      // Extract phone number from WhatsApp format (whatsapp:+1234567890 -> +1234567890)
+      const phoneNumber = From.replace('whatsapp:', '');
+      
+      // Process the message through our bot
+      const response = await handleWhatsAppMessage(phoneNumber, Body);
+      
+      res.json({ response });
+    } catch (error) {
+      console.error('WhatsApp webhook error:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // WhatsApp webhook verification (for Twilio setup)
+  app.get("/api/whatsapp/webhook", (req, res) => {
+    // Handle Twilio webhook verification
+    const { hub } = req.query;
+    if (hub) {
+      // Twilio verification
+      res.status(200).send(hub);
+    } else {
+      res.status(200).send("WhatsApp webhook is active");
+    }
+  });
+
+  // Public complaint tracking endpoint (no authentication required)
+  app.get("/api/track/:id", async (req, res) => {
+    try {
+      const complaint = await storage.getComplaint(req.params.id);
+      if (!complaint) {
+        return res.status(404).json({ message: "Complaint not found" });
+      }
+      
+      // Return limited public information
+      const publicInfo = {
+        id: complaint.id,
+        title: complaint.title,
+        status: complaint.status,
+        category: complaint.category,
+        location: complaint.location,
+        priority: complaint.priority,
+        createdAt: complaint.createdAt,
+        updatedAt: complaint.updatedAt
+      };
+      
+      res.json(publicInfo);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to track complaint" });
     }
   });
 
@@ -73,25 +134,17 @@ export function registerRoutes(app: Express): Server {
       let complaints;
       if (req.user!.role === "citizen") {
         complaints = await storage.getComplaintsByUser(req.user!.id);
-      } else if (req.user!.role === "official") {
-        // Use the official's department value directly as the complaint category (canonical slug)
-        const user = await storage.getUser(req.user!.id);
-        console.log("Official user:", user);
-        if (!user || !user.department) {
-          return res.status(403).json({ message: "Official does not have a department assigned" });
-        }
-        const category = user.department;
-        console.log("Looking for complaints with category:", category);
-        const allComplaints = await storage.getAllComplaints();
-        console.log("All complaints:", allComplaints.map(c => ({ title: c.title, category: c.category })));
-        complaints = allComplaints.filter((c) => c.category === category);
-        console.log("Filtered complaints for official:", complaints.length);
-      } else {
-        // Admins see all complaints
+      } else if (req.user!.role === "official" || req.user!.role === "admin") {
+        // Officials and Admins see all complaints
+        console.log("Official/Admin user requesting all complaints");
         complaints = await storage.getAllComplaints();
+        console.log("Found", complaints.length, "complaints for official/admin");
+      } else {
+        return res.status(403).json({ message: "Access denied" });
       }
       res.json(complaints);
     } catch (error) {
+      console.error("Error fetching complaints:", error);
       res.status(500).json({ message: "Failed to fetch complaints" });
     }
   });

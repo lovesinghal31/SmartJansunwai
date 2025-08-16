@@ -125,6 +125,17 @@ export default function CitizenDashboard() {
     placeholderData: { total: 0, inProgressOrUrgent: 0, resolved: 0, avgDays: 0 }
   });
 
+  // Fetch user complaints for citizen dashboard
+  const { data: userComplaints = [], isLoading: complaintsLoading, error: complaintsError } = useQuery<any[]>({
+    queryKey: ["/api/complaints"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/complaints", undefined, accessToken);
+      if (!res.ok) throw new Error("Failed to fetch complaints");
+      return res.json();
+    },
+    enabled: !!user && !!accessToken,
+  });
+
   const features = [
     { icon: Bot, title: "AI-Powered Classification", description: "Automatically categorize and route complaints to the right department using advanced NLP algorithms.", color: "bg-purple-100 text-purple-800" },
     { icon: MapPin, title: "Interactive Complaint Map", description: "Visualize complaints geographically with real-time plotting and heatmap analysis.", color: "bg-green-100 text-green-600" },
