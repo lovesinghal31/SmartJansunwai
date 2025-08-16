@@ -33,20 +33,32 @@ const complaintSchema = z.object({
 type ComplaintFormData = z.infer<typeof complaintSchema>;
 
 // AI analysis result structure
-
 interface AIAnalysisResult {
   priority: "Low" | "Medium" | "High";
   isComplaintValid: boolean;
-  reasoning: string;
+  reasoning: string; 
   suggestedCategory: string;
   estimatedResolutionDays: number;
 }
 
-export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTrack?: () => void }) {
+// Helper function to get priority badge classes
+const getPriorityBadgeClass = (priority: string) => {
+  switch (priority?.toLowerCase()) {
+    case 'high':
+      return 'bg-red-100 text-red-800 border-red-200';
+    case 'medium':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'low':
+      return 'bg-green-100 text-green-800 border-green-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+export default function AIComplaintForm() {
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
-  const [formStep, setFormStep] = useState<'initial' | 'preview' | 'submitted'>('initial');
 
   useEffect(() => {
     async function fetchCategories() {
@@ -65,14 +77,7 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
     }
     fetchCategories();
   }, []);
-
-  const getPriorityBadgeClass = (priority: "Low" | "Medium" | "High") => {
-    switch (priority) {
-      case "High": return "bg-red-500 hover:bg-red-600 text-white";
-      case "Medium": return "bg-yellow-500 hover:bg-yellow-600 text-white";
-      case "Low": default: return "bg-blue-500 hover:bg-blue-600 text-white";
-    }
-  };
+  const [formStep, setFormStep] = useState<'initial' | 'preview' | 'submitted' | 'editing'>('initial');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isLocationLoading, setIsLocationLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
@@ -369,6 +374,24 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
           {isLocationLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
         </Button>
       </div>
+      {errors.location && <p className="text-red-500 text-xs">{errors.location.message}</p>}
+
+      <Textarea placeholder="Describe your complaint in detail..." {...register("description")} rows={4} />
+      {errors.description && <p className="text-red-500 text-xs">{errors.description.message}</p>}
+
+      <Button type="submit" disabled={isAiLoading || categoriesLoading} className="w-full">
+        {isAiLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            AI is analyzing your complaint...
+          </>
+        ) : (
+          <>
+            <Brain className="mr-2 h-4 w-4" />
+            Analyze with AI
+          </>
+        )}
+      </Button>
     </form>
   );
 }
