@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
@@ -6,8 +6,7 @@ import AIComplaintForm from "@/components/ai-complaint-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import {
+import { 
   Plus, 
   Search, 
   Bot, 
@@ -19,19 +18,12 @@ import {
   Brain,
   BarChart3,
   Heart,
-  Loader2,
-  Filter
+  Loader2
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem
-} from "@/components/ui/select";
 
+<<<<<<< HEAD
 // Type for status options from backend
 interface StatusOption {
   value: string;
@@ -39,35 +31,15 @@ interface StatusOption {
   displayLabel: string;
 }
 
-// Import types for query results
-// Types copied from home-page.tsx
-interface HomepageStats {
-  totalComplaints: number;
-  resolvedComplaints: number;
-  avgResolutionDays: number;
-}
-interface AiAccuracyStats {
-  classification: number;
-  prediction: number;
-  sentiment: number;
-}
-interface DashboardPreviewStats {
-  total: number;
-  inProgressOrUrgent: number;
-  resolved: number;
-  avgDays: number;
-}
-
 export default function CitizenDashboard() {
   const { user, accessToken } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const lastNotificationId = useRef<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showComplaintForm, setShowComplaintForm] = useState(false);
-  const [selectedDashboard, setSelectedDashboard] = useState<'citizen' | 'official'>('citizen');
+  
   const [statusOptions, setStatusOptions] = useState<StatusOption[]>([]);
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -89,7 +61,33 @@ export default function CitizenDashboard() {
     }
     fetchStatusOptions();
   }, []);
+=======
+// Define the structure for the stats data we expect from the API
+interface HomepageStats {
+  totalComplaints: number;
+  resolvedComplaints: number;
+  avgResolutionDays: number;
+}
 
+interface AiAccuracyStats {
+    classification: number;
+    prediction: number;
+    sentiment: number;
+}
+
+// --- NEW: Define structure for the dashboard preview stats ---
+interface DashboardPreviewStats {
+    total: number;
+    inProgressOrUrgent: number;
+    resolved: number;
+    avgDays: number;
+}
+
+export default function HomePage() {
+  const { user, accessToken } = useAuth();
+  const [selectedDashboard, setSelectedDashboard] = useState<'citizen' | 'official'>('citizen');
+  const navigate = useNavigate();
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
 
   const { data: homepageStats, isLoading: statsLoading } = useQuery<HomepageStats>({
     queryKey: ["/api/stats/homepage"],
@@ -123,6 +121,17 @@ export default function CitizenDashboard() {
     // Only run this query if the user is logged in
     enabled: !!user, 
     placeholderData: { total: 0, inProgressOrUrgent: 0, resolved: 0, avgDays: 0 }
+  });
+
+  // Fetch user complaints for citizen dashboard
+  const { data: userComplaints = [], isLoading: complaintsLoading, error: complaintsError } = useQuery<any[]>({
+    queryKey: ["/api/complaints"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/complaints", undefined, accessToken);
+      if (!res.ok) throw new Error("Failed to fetch complaints");
+      return res.json();
+    },
+    enabled: !!user && !!accessToken,
   });
 
   const features = [
@@ -205,6 +214,7 @@ export default function CitizenDashboard() {
                   <div className="text-sm text-blue-100">Avg Resolution</div>
                 </div>
               </div>
+<<<<<<< HEAD
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-48">
                   <Filter className="mr-2 h-4 w-4" />
@@ -219,6 +229,8 @@ export default function CitizenDashboard() {
                   ))}
                 </SelectContent>
               </Select>
+=======
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
             </div>
 
             <Card className="bg-white shadow-2xl w-full max-w-lg mx-auto">

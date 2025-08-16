@@ -33,20 +33,19 @@ const complaintSchema = z.object({
 type ComplaintFormData = z.infer<typeof complaintSchema>;
 
 // AI analysis result structure
-
 interface AIAnalysisResult {
   priority: "Low" | "Medium" | "High";
   isComplaintValid: boolean;
-  reasoning: string;
+  reasoning: string; 
   suggestedCategory: string;
   estimatedResolutionDays: number;
 }
 
-export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTrack?: () => void }) {
+<<<<<<< HEAD
+export default function AIComplaintForm() {
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
-  const [formStep, setFormStep] = useState<'initial' | 'preview' | 'submitted'>('initial');
 
   useEffect(() => {
     async function fetchCategories() {
@@ -65,14 +64,20 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
     }
     fetchCategories();
   }, []);
+  const [formStep, setFormStep] = useState<'initial' | 'preview' | 'submitted' | 'editing'>('initial');
+=======
+const getPriorityBadgeClass = (priority: "Low" | "Medium" | "High") => {
+  switch (priority) {
+    case "High": return "bg-red-500 hover:bg-red-600 text-white";
+    case "Medium": return "bg-yellow-500 hover:bg-yellow-600 text-white";
+    case "Low": default: return "bg-blue-500 hover:bg-blue-600 text-white";
+  }
+};
 
-  const getPriorityBadgeClass = (priority: "Low" | "Medium" | "High") => {
-    switch (priority) {
-      case "High": return "bg-red-500 hover:bg-red-600 text-white";
-      case "Medium": return "bg-yellow-500 hover:bg-yellow-600 text-white";
-      case "Low": default: return "bg-blue-500 hover:bg-blue-600 text-white";
-    }
-  };
+// This component now takes a function to handle navigation
+export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTrack: () => void }) {
+  const [formStep, setFormStep] = useState<'initial' | 'preview' | 'submitted'>('initial');
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isLocationLoading, setIsLocationLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
@@ -125,6 +130,7 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
       return;
     }
 
+<<<<<<< HEAD
     // Get available categories for the AI prompt
     const categoryNames = categories.map(cat => cat.name).join(' | ');
 
@@ -142,6 +148,9 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
         "suggestedCategory": string (must be one of the available categories),
         "estimatedResolutionDays": integer between 1 and 14
       }`;
+=======
+    const prompt = `Act as a strict civic complaint validator for a system in India. Analyze the following complaint. **Rules:** 1. **Location Check:** The location must be a plausible, real place within India. Reject locations from other countries (e.g., Pakistan) or nonsensical places. 2. **Content Analysis:** The description is the most important field. If the user's chosen category contradicts the description, trust the description to assign the correct category. 3. **Validity Check:** The complaint must be a genuine, specific issue. Reject vague complaints (e.g., "problem in my country/mulk"), gibberish, or test messages. **Complaint Data:** - User's Chosen Category: "${data.category}" - Title: "${data.title}" - Description: "${data.description}" - Location: "${data.location}" **Your Task:** Respond ONLY with a valid JSON object. Do not include any other text or markdown. **JSON Structure:** { "priority": "Low" | "Medium" | "High", "isComplaintValid": boolean, "reasoning": "If invalid, provide a brief, user-friendly reason. Otherwise, an empty string.", "suggestedCategory": "Water Supply" | "Roads & Transportation" | "Electricity" | "Sanitation" | "Street Lighting" | "Parks & Recreation", "estimatedResolutionDays": integer between 1 and 14 }`;
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
 
     try {
       console.log("Making AI API request..."); // Debug log
@@ -150,6 +159,7 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
       });
+<<<<<<< HEAD
 
       console.log("AI API response status:", response.status); // Debug log
       if (!response.ok) {
@@ -157,6 +167,9 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
         console.error("AI API error:", errorText); // Debug log
         throw new Error(`AI API request failed with status ${response.status}: ${errorText}`);
       }
+=======
+      if (!response.ok) throw new Error("AI API request failed");
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
       
       const result = await response.json();
       console.log("AI API result:", result); // Debug log
@@ -186,6 +199,7 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
       setFormStep('preview');
     } catch (error) {
       console.error("AI Analysis Error:", error);
+<<<<<<< HEAD
       
       // Provide more specific error messages
       let errorMessage = "Could not analyze the complaint. Please try again.";
@@ -206,6 +220,9 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
         description: errorMessage, 
         variant: "destructive" 
       });
+=======
+      toast({ title: "AI Analysis Failed", description: "Could not analyze the complaint.", variant: "destructive" });
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
     } finally {
       setIsAiLoading(false);
     }
@@ -216,6 +233,7 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
         toast({ title: "Password Required", description: "Please create a password of at least 6 characters.", variant: "destructive" });
         return;
     }
+<<<<<<< HEAD
     
     const values = getValues();
     
@@ -229,6 +247,14 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
       priority: aiResult?.priority.toLowerCase() || 'medium',
       password: password,
     };
+=======
+
+    const categoryMap: Record<string, string> = { "Roads & Transportation": "road-transportation", "Water Supply": "water-supply", "Electricity": "electricity", "Sanitation": "sanitation", "Street Lighting": "street-lighting", "Parks & Recreation": "parks-recreation" };
+    const values = getValues();
+    const backendCategory = categoryMap[values.category] || values.category.toLowerCase().replace(/ /g, '-');
+    
+    const finalData = { ...values, category: backendCategory, priority: aiResult?.priority.toLowerCase() || 'medium', password: password };
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
     createComplaintMutation.mutate(finalData);
   };
 
@@ -335,6 +361,7 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
 
   return (
     <form onSubmit={handleSubmit(handleAnalyzeComplaint)} className="space-y-3">
+<<<<<<< HEAD
       <Input placeholder="Your Name" {...register("name")} />
       {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
       
@@ -367,8 +394,38 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
         <Input placeholder="Location (e.g., Near Palasia Square)" {...register("location")} className="flex-grow" />
         <Button type="button" variant="outline" size="icon" onClick={handleDetectLocation} disabled={isLocationLoading}>
           {isLocationLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+=======
+        <Input placeholder="Your Name" {...register("name")} />
+        {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
+        <Input placeholder="Contact Number" {...register("contact")} />
+        {errors.contact && <p className="text-red-500 text-xs">{errors.contact.message}</p>}
+        <Controller name="category" control={control} render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger><SelectValue placeholder="Select Complaint Category" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="Water Supply">Water Supply</SelectItem><SelectItem value="Roads & Transportation">Roads & Transportation</SelectItem>
+                    <SelectItem value="Electricity">Electricity</SelectItem><SelectItem value="Sanitation">Sanitation</SelectItem>
+                    <SelectItem value="Street Lighting">Street Lighting</SelectItem><SelectItem value="Parks & Recreation">Parks & Recreation</SelectItem>
+                </SelectContent>
+            </Select>
+        )} />
+        {errors.category && <p className="text-red-500 text-xs">{errors.category.message}</p>}
+        <Input placeholder="Complaint Title (e.g., Pothole on MG Road)" {...register("title")} />
+        {errors.title && <p className="text-red-500 text-xs">{errors.title.message}</p>}
+        <div className="flex items-center gap-2">
+            <Input placeholder="Location (e.g., Near Palasia Square, Indore)" {...register("location")} className="flex-grow" />
+            <Button type="button" variant="outline" size="icon" onClick={handleDetectLocation} disabled={isLocationLoading}>
+                {isLocationLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+            </Button>
+        </div>
+        {errors.location && <p className="text-red-500 text-xs">{errors.location.message}</p>}
+        <Textarea placeholder="Describe your complaint in detail..." {...register("description")} rows={3} />
+        {errors.description && <p className="text-red-500 text-xs">{errors.description.message}</p>}
+        <Button type="submit" className="w-full" disabled={isAiLoading}>
+            {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Brain className="mr-2 h-4 w-4"/>}
+            Analyze Complaint
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
         </Button>
-      </div>
     </form>
   );
 }
