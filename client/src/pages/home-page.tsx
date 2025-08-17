@@ -171,6 +171,108 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* WhatsApp Bot Section */}
+      <section className="py-16 bg-green-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500 rounded-full mb-4">
+              <MessageSquare className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">File Complaints via WhatsApp</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Now you can file and track complaints directly through WhatsApp! Our AI-powered bot makes it easy to report issues without visiting any website.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <Card className="bg-white shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="h-5 w-5 text-green-500" />
+                  How It Works
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">1</div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Send a Message</h4>
+                    <p className="text-gray-600 text-sm">Describe your complaint in detail via WhatsApp</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">2</div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">AI Analysis</h4>
+                    <p className="text-gray-600 text-sm">Our AI categorizes and prioritizes your complaint</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">3</div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Provide Details</h4>
+                    <p className="text-gray-600 text-sm">Share location and set a secure password</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">4</div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Get Complaint ID</h4>
+                    <p className="text-gray-600 text-sm">Receive a unique ID to track your complaint</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-white">Available Commands</CardTitle>
+                <CardDescription className="text-green-100">Try these messages with our WhatsApp bot</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-white bg-opacity-20 rounded-lg p-3">
+                  <h4 className="font-semibold">File a Complaint</h4>
+                  <p className="text-sm text-green-100">"The street light near my house is not working since 3 days"</p>
+                </div>
+                <div className="bg-white bg-opacity-20 rounded-lg p-3">
+                  <h4 className="font-semibold">Check Status</h4>
+                  <p className="text-sm text-green-100">"What's the complaint status"</p>
+                </div>
+                <div className="bg-white bg-opacity-20 rounded-lg p-3">
+                  <h4 className="font-semibold">Get Help</h4>
+                  <p className="text-sm text-green-100">"Hi" or "Hello"</p>
+                </div>
+                <div className="bg-white bg-opacity-10 rounded-lg p-3 mt-4">
+                  <p className="text-sm text-center">
+                    <strong>WhatsApp Number:</strong><br />
+                    Coming Soon - Set up your Twilio integration
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-12 text-center">
+            <Card className="bg-yellow-50 border-yellow-200 max-w-2xl mx-auto">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-yellow-800 mb-2">Testing Available Now!</h3>
+                <p className="text-yellow-700 text-sm mb-4">
+                  You can test the WhatsApp bot functionality right now using curl commands or API calls. 
+                  Check the WHATSAPP_SETUP.md file for complete testing instructions.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="bg-white border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+                  onClick={() => window.open('/WHATSAPP_SETUP.md', '_blank')}
+                >
+                  View Setup Guide
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">

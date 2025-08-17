@@ -73,6 +73,18 @@ const userUpdateFormSchema = z.object({
 });
 
 export default function AdminDashboard() {
+  const { toast } = useToast();
+  const { accessToken } = useAuth();
+  // Fetch all complaints for board view
+  const { data: complaints = [], isLoading: complaintsLoading, error: complaintsError } = useQuery<any[]>({
+    queryKey: ["/api/complaints"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/complaints", undefined, accessToken);
+      if (!res.ok) throw new Error("Failed to fetch complaints");
+      return res.json();
+    },
+    enabled: !!accessToken,
+  });
   const [selectedTab, setSelectedTab] = useState("overview");
   const [departmentDialog, setDepartmentDialog] = useState(false);
   const [slaDialog, setSlaDialog] = useState(false);
@@ -80,8 +92,6 @@ export default function AdminDashboard() {
   const [userDialog, setUserDialog] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState<any>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const { toast } = useToast();
-  const { accessToken } = useAuth();
 
   // Queries
   const { data: departments = [] } = useQuery<any[]>({
@@ -286,8 +296,9 @@ export default function AdminDashboard() {
 
       <div className="container mx-auto px-4 py-6">
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="board">Complaints Board</TabsTrigger>
             <TabsTrigger value="departments">Departments</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="sla">SLA Settings</TabsTrigger>
@@ -295,6 +306,42 @@ export default function AdminDashboard() {
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="audit">Audit Logs</TabsTrigger>
           </TabsList>
+          {/* Complaints Board Tab */}
+          <TabsContent value="board" className="space-y-4">
+            <h2 className="text-xl font-semibold mb-4">Complaint Management Board</h2>
+            {complaintsLoading ? (
+              <div>Loading complaints...</div>
+            ) : complaintsError ? (
+              <div className="text-red-500">Error loading complaints: {complaintsError.message}</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full border text-sm">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="px-2 py-1 border">ID</th>
+                      <th className="px-2 py-1 border">Title</th>
+                      <th className="px-2 py-1 border">Category</th>
+                      <th className="px-2 py-1 border">Status</th>
+                      <th className="px-2 py-1 border">Priority</th>
+                      <th className="px-2 py-1 border">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {complaints.map((c) => (
+                      <tr key={c.id} className="hover:bg-gray-50">
+                        <td className="px-2 py-1 border">{c.id}</td>
+                        <td className="px-2 py-1 border">{c.title}</td>
+                        <td className="px-2 py-1 border">{c.category}</td>
+                        <td className="px-2 py-1 border">{c.status}</td>
+                        <td className="px-2 py-1 border">{c.priority}</td>
+                        <td className="px-2 py-1 border">{new Date(c.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </TabsContent>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-4">

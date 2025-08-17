@@ -154,10 +154,11 @@ export default function ComplaintMapPage() {
     fetchStatusOptions();
   }, []);
 
-  const { data: complaintsFromApi = [], isLoading } = useQuery<MapComplaint[]>({
-    queryKey: ["complaints"],
+  const { data: complaintsFromApi = [], isLoading, error: complaintsError } = useQuery<MapComplaint[]>({
+    queryKey: ["/api/complaints"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/complaints", undefined, accessToken);
+      if (!res.ok) throw new Error("Failed to fetch complaints");
       return res.json();
     },
     enabled: !!user && !!accessToken,
@@ -316,6 +317,10 @@ export default function ComplaintMapPage() {
               <CardContent className="p-0 h-full">
                 {isLoading ? (
                   <div className="flex items-center justify-center h-full text-gray-500">Loading Map Data...</div>
+                ) : complaintsError ? (
+                  <div className="flex items-center justify-center h-full text-red-500">
+                    Error loading complaints: {complaintsError.message}
+                  </div>
                 ) : (
                   <MapContainer 
                     center={[22.7196, 75.8577]}

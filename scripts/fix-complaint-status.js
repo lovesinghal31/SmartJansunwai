@@ -2,13 +2,17 @@
 // Run this with: node scripts/fix-complaint-status.js
 
 // const mongoose = require('mongoose');
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 dotenv.config({
     path: '../.env'
 });
 // const Complaint = require('../server/models/complaint.model');
-import Complaint from '../server/models/complaint.model';
+const dotenv = require('dotenv');
+dotenv.config({
+  path: '../.env'
+});
+const mongoose = require('mongoose');
+// const Complaint = require('../server/models/complaint.model');
+const Complaint = require('../server/models/complaint.model.js');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/smartjansunwai';
 
