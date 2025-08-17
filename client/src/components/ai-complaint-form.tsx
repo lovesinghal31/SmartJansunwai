@@ -41,7 +41,6 @@ interface AIAnalysisResult {
   estimatedResolutionDays: number;
 }
 
-<<<<<<< HEAD
 export default function AIComplaintForm() {
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -65,7 +64,6 @@ export default function AIComplaintForm() {
     fetchCategories();
   }, []);
   const [formStep, setFormStep] = useState<'initial' | 'preview' | 'submitted' | 'editing'>('initial');
-=======
 const getPriorityBadgeClass = (priority: "Low" | "Medium" | "High") => {
   switch (priority) {
     case "High": return "bg-red-500 hover:bg-red-600 text-white";
@@ -77,7 +75,6 @@ const getPriorityBadgeClass = (priority: "Low" | "Medium" | "High") => {
 // This component now takes a function to handle navigation
 export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTrack: () => void }) {
   const [formStep, setFormStep] = useState<'initial' | 'preview' | 'submitted'>('initial');
->>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isLocationLoading, setIsLocationLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
@@ -361,40 +358,6 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
 
   return (
     <form onSubmit={handleSubmit(handleAnalyzeComplaint)} className="space-y-3">
-<<<<<<< HEAD
-      <Input placeholder="Your Name" {...register("name")} />
-      {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
-      
-      <Input placeholder="Contact Number" {...register("contact")} />
-      {errors.contact && <p className="text-red-500 text-xs">{errors.contact.message}</p>}
-
-      <Controller
-        name="category"
-        control={control}
-        render={({ field }) => (
-          <Select onValueChange={field.onChange} value={field.value}>
-            <SelectTrigger><SelectValue placeholder={categoriesLoading ? "Loading..." : "Select Complaint Category"} /></SelectTrigger>
-            <SelectContent>
-              {categoriesLoading && <div className="p-2 text-gray-500">Loading...</div>}
-              {categoriesError && <div className="p-2 text-red-500">{categoriesError}</div>}
-              {!categoriesLoading && !categoriesError && categories.map((cat) => (
-                <SelectItem key={cat.slug} value={cat.name}>{cat.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      />
-      {errors.category && <p className="text-red-500 text-xs">{errors.category.message}</p>}
-
-      <Input placeholder="Complaint Title (e.g., Pothole on MG Road)" {...register("title")} />
-      {errors.title && <p className="text-red-500 text-xs">{errors.title.message}</p>}
-      
-      {/* --- NEW: Location Input with Auto-Detect Button --- */}
-      <div className="flex items-center gap-2">
-        <Input placeholder="Location (e.g., Near Palasia Square)" {...register("location")} className="flex-grow" />
-        <Button type="button" variant="outline" size="icon" onClick={handleDetectLocation} disabled={isLocationLoading}>
-          {isLocationLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
-=======
         <Input placeholder="Your Name" {...register("name")} />
         {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
         <Input placeholder="Contact Number" {...register("contact")} />
@@ -424,7 +387,6 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
         <Button type="submit" className="w-full" disabled={isAiLoading}>
             {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Brain className="mr-2 h-4 w-4"/>}
             Analyze Complaint
->>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
         </Button>
     </form>
   );
