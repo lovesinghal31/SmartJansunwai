@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -174,28 +175,28 @@ export default function ComplaintMapPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Category</label>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={categoriesLoading ? "Loading..." : "All Categories"} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="road-transportation">Roads & Transportation</SelectItem>
-                      <SelectItem value="water-supply">Water Supply</SelectItem>
-                      <SelectItem value="electricity">Electricity</SelectItem>
-                      <SelectItem value="sanitation">Sanitation</SelectItem>
-                      <SelectItem value="street-lighting">Street Lighting</SelectItem>
-                      <SelectItem value="parks-recreation">Parks & Recreation</SelectItem>
+                      {categoriesLoading && <div className="p-2 text-gray-500">Loading...</div>}
+                      {categoriesError && <div className="p-2 text-red-500">{categoriesError}</div>}
+                      {!categoriesLoading && !categoriesError && categories.map((cat) => (
+                        <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
                   <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger><SelectValue placeholder="All Status" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={statusLoading ? "Loading..." : "All Status"} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="submitted">New</SelectItem>
-                      <SelectItem value="in-progress">In Progress</SelectItem>
-                      <SelectItem value="under-review">Under Review</SelectItem>
-                      <SelectItem value="resolved">Resolved</SelectItem>
+                      {statusLoading && <div className="p-2 text-gray-500">Loading...</div>}
+                      {statusError && <div className="p-2 text-red-500">{statusError}</div>}
+                      {!statusLoading && !statusError && statusOptions.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>{status.displayLabel}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

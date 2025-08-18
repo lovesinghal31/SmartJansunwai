@@ -12,6 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Calendar, MapPin, Clock, Star, User, Phone } from "lucide-react";
 import type { Complaint } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import { useState, useEffect } from "react";
 
 interface ComplaintCardProps {
   complaint: Complaint;
@@ -20,10 +21,48 @@ interface ComplaintCardProps {
 export default function ComplaintCard({ complaint }: ComplaintCardProps) {
   const { toast } = useToast();
   const { accessToken } = useAuth();
+<<<<<<< HEAD
+  
+  // Categories state for dynamic loading
+  const [categories, setCategories] = useState<Array<{id: string, name: string, slug: string}>>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    async function fetchCategories() {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
+      try {
+        const res = await fetch("/api/categories");
+        if (!res.ok) throw new Error("Failed to fetch categories");
+        const data = await res.json();
+        setCategories(data);
+      } catch (err: any) {
+        setCategoriesError(err.message || "Unknown error");
+      } finally {
+        setCategoriesLoading(false);
+      }
+    }
+    fetchCategories();
+  }, []);
+  
+  const form = useForm<InsertComplaint>({
+    resolver: zodResolver(insertComplaintSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      category: "",
+      location: "",
+      priority: "medium",
+    },
+  });
+=======
   const [showDetails, setShowDetails] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
 
   const submitFeedbackMutation = useMutation({
     mutationFn: async (data: { rating: number; comment?: string }) => {
@@ -72,6 +111,33 @@ export default function ComplaintCard({ complaint }: ComplaintCardProps) {
   };
 
   return (
+<<<<<<< HEAD
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <div>
+        <Label htmlFor="category">Complaint Category</Label>
+        <Select
+          value={form.watch("category")}
+          onValueChange={(value) => form.setValue("category", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={categoriesLoading ? "Loading..." : "Select Category"} />
+          </SelectTrigger>
+          <SelectContent>
+            {categoriesLoading && <div className="p-2 text-gray-500">Loading...</div>}
+            {categoriesError && <div className="p-2 text-red-500">{categoriesError}</div>}
+            {!categoriesLoading && !categoriesError && categories.map((category) => (
+              <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
+            ))}
+            <SelectItem value="Other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.category && (
+          <p className="text-sm text-red-600 mt-1">
+            {form.formState.errors.category.message}
+          </p>
+        )}
+      </div>
+=======
     <>
       <Card className="hover:shadow-md transition-shadow">
         <CardContent className="p-6">
@@ -100,6 +166,7 @@ export default function ComplaintCard({ complaint }: ComplaintCardProps) {
           </div>
         </CardContent>
       </Card>
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
 
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-w-2xl">

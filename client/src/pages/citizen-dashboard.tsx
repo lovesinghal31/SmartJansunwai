@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import AIComplaintForm from "@/components/ai-complaint-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { 
   Plus, 
@@ -18,12 +21,20 @@ import {
   Brain,
   BarChart3,
   Heart,
-  Loader2
+  Loader2,
+  Filter
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
-// Define the structure for the stats data we expect from the API
+// Type for status options from backend
+interface StatusOption {
+  value: string;
+  label: string;
+  displayLabel: string;
+}
+
+// Type definitions for API responses
 interface HomepageStats {
   totalComplaints: number;
   resolvedComplaints: number;
@@ -31,23 +42,57 @@ interface HomepageStats {
 }
 
 interface AiAccuracyStats {
-    classification: number;
-    prediction: number;
-    sentiment: number;
+  classification: number;
+  prediction: number;
+  sentiment: number;
 }
 
-// --- NEW: Define structure for the dashboard preview stats ---
 interface DashboardPreviewStats {
-    total: number;
-    inProgressOrUrgent: number;
-    resolved: number;
-    avgDays: number;
+  total: number;
+  inProgressOrUrgent: number;
+  resolved: number;
+  avgDays: number;
 }
 
-export default function HomePage() {
+interface Notification {
+  id: string;
+  message: string;
+  type: string;
+  createdAt: string;
+}
+
+export default function CitizenDashboard() {
   const { user, accessToken } = useAuth();
-  const [selectedDashboard, setSelectedDashboard] = useState<'citizen' | 'official'>('citizen');
+  const { toast } = useToast();
   const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const lastNotificationId = useRef<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [showComplaintForm, setShowComplaintForm] = useState(false);
+  const [selectedDashboard, setSelectedDashboard] = useState<'citizen' | 'official'>('citizen');
+  
+  const [statusOptions, setStatusOptions] = useState<StatusOption[]>([]);
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchStatusOptions() {
+      setStatusLoading(true);
+      setStatusError(null);
+      try {
+        const res = await fetch("/api/status-options");
+        if (!res.ok) throw new Error("Failed to fetch status options");
+        const data = await res.json();
+        setStatusOptions(data);
+      } catch (err: any) {
+        setStatusError(err.message || "Unknown error");
+      } finally {
+        setStatusLoading(false);
+      }
+    }
+    fetchStatusOptions();
+  }, []);
 
   const { data: homepageStats, isLoading: statsLoading } = useQuery<HomepageStats>({
     queryKey: ["/api/stats/homepage"],
@@ -81,6 +126,17 @@ export default function HomePage() {
     // Only run this query if the user is logged in
     enabled: !!user, 
     placeholderData: { total: 0, inProgressOrUrgent: 0, resolved: 0, avgDays: 0 }
+  });
+
+  // Fetch user complaints for citizen dashboard
+  const { data: userComplaints = [], isLoading: complaintsLoading, error: complaintsError } = useQuery<any[]>({
+    queryKey: ["/api/complaints"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/complaints", undefined, accessToken);
+      if (!res.ok) throw new Error("Failed to fetch complaints");
+      return res.json();
+    },
+    enabled: !!user && !!accessToken,
   });
 
   const features = [

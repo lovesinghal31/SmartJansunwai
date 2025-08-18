@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -31,67 +32,95 @@ interface AnalyticsStats {
   byPriority: Record<string, number>;
 }
 
+interface AnalyticsSummary {
+  totalComplaints: number;
+  resolvedComplaints: number;
+  averageResolutionTime: number;
+  citizenSatisfaction: number;
+  resolutionRate: number;
+}
+
+interface DepartmentPerformance {
+  name: string;
+  complaints: number;
+  resolved: number;
+  avgTime: number;
+  satisfaction: number;
+}
+
+interface TrendData {
+  month: string;
+  complaints: number;
+  resolved: number;
+  satisfaction: number;
+}
+
 export default function AnalyticsPage() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [timeRange, setTimeRange] = useState("30d");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [selectedMetric, setSelectedMetric] = useState("complaints");
 
-  const { data: stats } = useQuery<AnalyticsStats>({
+  const { data: stats, isLoading: statsLoading } = useQuery<AnalyticsStats>({
     queryKey: ["/api/analytics/stats"],
-    enabled: !!user && user.role === "official",
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/analytics/stats", undefined, accessToken);
+      return res.json();
+    },
+    enabled: !!user && user.role === "official" && !!accessToken,
   });
 
-  // Mock enhanced analytics data
+  const { data: summary, isLoading: summaryLoading } = useQuery<AnalyticsSummary>({
+    queryKey: ["/api/analytics/summary"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/analytics/summary", undefined, accessToken);
+      return res.json();
+    },
+    enabled: !!user && user.role === "official" && !!accessToken,
+  });
+
+  const { data: departmentPerformance = [], isLoading: deptLoading } = useQuery<DepartmentPerformance[]>({
+    queryKey: ["/api/analytics/department-performance"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/analytics/department-performance", undefined, accessToken);
+      return res.json();
+    },
+    enabled: !!user && user.role === "official" && !!accessToken,
+  });
+
+  const { data: trendData = [], isLoading: trendsLoading } = useQuery<TrendData[]>({
+    queryKey: ["/api/analytics/trends", timeRange],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/analytics/trends?timeRange=${timeRange}`, undefined, accessToken);
+      return res.json();
+    },
+    enabled: !!user && user.role === "official" && !!accessToken,
+  });
+
+  // Default values for loading states
   const analyticsData = {
-    totalComplaints: 12847,
-    resolvedComplaints: 10234,
-    averageResolutionTime: 4.2,
-    citizenSatisfaction: 4.3,
-    departmentPerformance: [
-      { name: "Water Supply", complaints: 2456, resolved: 2123, avgTime: 3.2, satisfaction: 4.1 },
-      { name: "Roads & Transportation", complaints: 3821, resolved: 2987, avgTime: 5.8, satisfaction: 3.9 },
-      { name: "Electricity", complaints: 1654, resolved: 1523, avgTime: 2.1, satisfaction: 4.5 },
-      { name: "Sanitation", complaints: 2134, resolved: 1876, avgTime: 4.5, satisfaction: 4.2 },
-      { name: "Street Lighting", complaints: 987, resolved: 912, avgTime: 1.8, satisfaction: 4.6 },
-      { name: "Parks & Recreation", complaints: 456, resolved: 398, avgTime: 6.2, satisfaction: 4.0 },
-    ],
-    trendData: [
-      { month: "Jan", complaints: 1234, resolved: 987, satisfaction: 4.1 },
-      { month: "Feb", complaints: 1456, resolved: 1123, satisfaction: 4.2 },
-      { month: "Mar", complaints: 1687, resolved: 1345, satisfaction: 4.0 },
-      { month: "Apr", complaints: 1543, resolved: 1298, satisfaction: 4.3 },
-      { month: "May", complaints: 1789, resolved: 1456, satisfaction: 4.2 },
-      { month: "Jun", complaints: 1623, resolved: 1387, satisfaction: 4.4 },
-    ],
-    wardPerformance: [
-      { ward: 1, complaints: 156, performance: 92 },
-      { ward: 2, complaints: 234, performance: 87 },
-      { ward: 3, complaints: 189, performance: 94 },
-      { ward: 4, complaints: 298, performance: 83 },
-      { ward: 5, complaints: 176, performance: 91 },
-    ],
+    totalComplaints: summary?.totalComplaints || 0,
+    resolvedComplaints: summary?.resolvedComplaints || 0,
+    averageResolutionTime: summary?.averageResolutionTime || 0,
+    citizenSatisfaction: summary?.citizenSatisfaction || 4.0,
+    resolutionRate: summary?.resolutionRate || 0,
+    departmentPerformance: departmentPerformance,
+    trendData: trendData,
+    // Mock AI insights for now - can be enhanced later
     aiInsights: [
       {
         type: "prediction",
-        title: "Peak Complaint Period Forecast",
-        description: "Expect 15% increase in road-related complaints during monsoon season",
+        title: "Data-Driven Insights Available",
+        description: "Analytics are now powered by real complaint data",
         impact: "high",
-        recommendation: "Increase road maintenance team capacity by 20%"
+        recommendation: "Review department performance metrics for optimization opportunities"
       },
       {
         type: "optimization",
-        title: "Resource Allocation Opportunity",
-        description: "Water supply department showing 23% faster resolution times",
+        title: "Real-Time Performance Tracking",
+        description: "Monitoring actual resolution times and complaint volumes",
         impact: "medium",
-        recommendation: "Adopt water dept. workflow for other departments"
-      },
-      {
-        type: "alert",
-        title: "Ward 4 Performance Alert",
-        description: "17% drop in resolution rate compared to city average",
-        impact: "high",
-        recommendation: "Immediate review of Ward 4 processes required"
+        recommendation: "Focus on departments with lower resolution rates"
       }
     ]
   };
@@ -234,16 +263,35 @@ export default function AnalyticsPage() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Activity className="mr-2" size={20} />
-                Complaint Trends
+                Complaint Trends (Last 6 Months)
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <BarChart3 className="mx-auto text-gray-400 mb-2" size={48} />
-                  <p className="text-gray-600">Interactive trend chart would be displayed here</p>
-                  <p className="text-sm text-gray-500">Showing complaints and resolutions over time</p>
-                </div>
+              <div className="space-y-4">
+                {trendData.map((trend, index) => (
+                  <div key={trend.month} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <span className="font-medium">{trend.month}</span>
+                    </div>
+                    <div className="flex space-x-6 text-sm">
+                      <div>
+                        <span className="text-gray-600">Complaints: </span>
+                        <span className="font-bold text-blue-600">{trend.complaints}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Resolved: </span>
+                        <span className="font-bold text-green-600">{trend.resolved}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {trendsLoading && (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="text-gray-500 mt-2">Loading trends...</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -257,12 +305,35 @@ export default function AnalyticsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <PieChart className="mx-auto text-gray-400 mb-2" size={48} />
-                  <p className="text-gray-600">Pie chart showing complaint categories</p>
-                  <p className="text-sm text-gray-500">Roads: 30%, Water: 25%, Other: 45%</p>
-                </div>
+              <div className="space-y-3">
+                {stats && Object.entries(stats.byCategory).map(([category, count]) => {
+                  const percentage = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
+                  return (
+                    <div key={category} className="flex items-center justify-between">
+                      <span className="text-sm font-medium capitalize">{category.replace(/-/g, ' ')}</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-20 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-500 h-2 rounded-full"
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-sm text-gray-600 w-12 text-right">{percentage}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {statsLoading && (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="text-gray-500 mt-2">Loading categories...</p>
+                  </div>
+                )}
+                {!statsLoading && (!stats || Object.keys(stats.byCategory).length === 0) && (
+                  <div className="text-center py-8 text-gray-500">
+                    No category data available
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -362,29 +433,45 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Ward Performance */}
+        {/* Performance Overview */}
         <Card>
           <CardHeader>
-            <CardTitle>Ward Performance Matrix</CardTitle>
+            <CardTitle>System Performance Overview</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {analyticsData.wardPerformance.map((ward) => (
-                <div key={ward.ward} className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-gray-900">Ward {ward.ward}</div>
-                  <div className="text-sm text-gray-600 mb-2">{ward.complaints} complaints</div>
-                  <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getPerformanceColor(ward.performance)}`}>
-                    {ward.performance}% performance
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-                    <div
-                      className="bg-primary-600 h-2 rounded-full"
-                      style={{ width: `${ward.performance}%` }}
-                    ></div>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">
+                  {analyticsData.resolutionRate}%
                 </div>
-              ))}
+                <div className="text-sm text-gray-600">Resolution Rate</div>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">
+                  {analyticsData.averageResolutionTime}d
+                </div>
+                <div className="text-sm text-gray-600">Avg Resolution Time</div>
+              </div>
+              <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                <div className="text-2xl font-bold text-yellow-600">
+                  {departmentPerformance.length}
+                </div>
+                <div className="text-sm text-gray-600">Active Departments</div>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">
+                  {analyticsData.citizenSatisfaction.toFixed(1)}/5
+                </div>
+                <div className="text-sm text-gray-600">Satisfaction Score</div>
+              </div>
             </div>
+            
+            {(statsLoading || summaryLoading || deptLoading || trendsLoading) && (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-500 mt-2">Loading analytics data...</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
