@@ -17,6 +17,7 @@ import FeaturesPage from "@/pages/features-page";
 import FeedbackPage from "@/pages/feedback-page";
 import NotFound from "@/pages/not-found";
 import TrackComplaintPage from "@/components/track-complaint"; 
+import SettingsPage from "./pages/setting";
 
 function AppRouter() {
   return (
@@ -29,6 +30,7 @@ function AppRouter() {
         <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/chatbot" element={<ProtectedRoute><ChatbotPage /></ProtectedRoute>} />
         <Route path="/complaint-map" element={<ProtectedRoute><ComplaintMapPage /></ProtectedRoute>} />
+        <Route path="/profile/settings" element={<SettingsPage />} />
         <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
         <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
         <Route path="/features" element={<FeaturesPage />} />

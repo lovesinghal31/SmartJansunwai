@@ -273,9 +273,13 @@ export default function OfficialDashboard() {
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
+<<<<<<< HEAD
                 <SelectTrigger className="w-full lg:w-48">
                   <SelectValue placeholder={statusLoading ? "Loading..." : "All Status"} />
                 </SelectTrigger>
+=======
+                <SelectTrigger className="w-full lg:w-48"><SelectValue placeholder="All Status" /></SelectTrigger>
+>>>>>>> 7755a66a31155763bbafcb5e01c1629b8b65936d
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   {statusLoading && <div className="p-2 text-gray-500">Loading...</div>}

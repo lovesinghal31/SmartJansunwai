@@ -1,4 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
+//import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import Logo from "./logo.png"; // Adjust the path as necessary
 import { useToast } from "@/hooks/use-toast";
 
 export default function Header() {
+  const navigate = useNavigate();
   const { user, logoutMutation, accessToken } = useAuth();
   const location = useLocation(); // react-router-dom's useLocation returns an object
   const { t } = useTranslation();
@@ -118,14 +120,23 @@ export default function Header() {
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center">
-            <Link to="/">
-              <div className="flex items-center space-x-3">
-                <img src={Logo} alt="Samadhan+" className="h-12 w-12 object-contain" />
-                <span className="text-xl font-bold text-gray-900">SAMADHAN+</span>
-              </div>
-            </Link>
+          <div className="flex-grow-0">
+            <div className="flex items-center justify-start flex-shrink-0">
+              <Link to="/">
+                <div className="flex items-center space-x-3">
+                  <img
+                    src={Logo}
+                    alt="Samadhan+"
+                    className="h-12 w-12 object-contain rounded"
+                  />
+                  <span className="text-2xl font-bold text-gray-900 leading-none">
+                    SAMADHAN+
+                  </span>
+                </div>
+              </Link>
+            </div>
           </div>
+</div>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-1">
@@ -139,7 +150,7 @@ export default function Header() {
               return (
                 <Link key={item.name} to={item.href}>
                   <div
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`flex items-center space-x-2 px-4 py-3 rounded-md text-base font-medium transition-colors ${
                       location.pathname === item.href
                         ? "text-primary-600 bg-primary-50"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
@@ -186,7 +197,7 @@ export default function Header() {
                       <div className="p-4 text-center text-sm text-red-500">Failed to load.</div>
                     ) : notifications.length > 0 ? (
                       notifications.map((n: Notification) => (
-                        <div key={n.id} className={`p-3 border-b last:border-b-0 ${!n.isRead ? 'bg-blue-50' : ''}`}>
+                        <div key={n.id} className={`p-3 border-b last:border-b-0 ${!n.isRead ? 'bg-blue-50' : ''}</div>`}>
                           <div className="flex justify-between items-start">
                             <div className="flex-grow cursor-pointer" onClick={() => handleNotificationClick(n)}>
                               <p className="font-semibold text-sm">{n.title}</p>
@@ -232,10 +243,13 @@ export default function Header() {
                         Dashboard
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings size={16} className="mr-2" />
-                      Settings
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile/settings">
+                        <Settings size={16} className="mr-2" />
+                        Settings
+                      </Link>
                     </DropdownMenuItem>
+
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
                       <LogOut size={16} className="mr-2" />
@@ -253,7 +267,6 @@ export default function Header() {
             )}
           </div>
         </div>
-      </div>
     </header>
   );
 }
