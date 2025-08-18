@@ -8,14 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  Bot, Send, Mic, User, MessageCircle, Clock, CheckCircle,
-  AlertCircle, HelpCircle, Lightbulb, FileText, Globe, History
+  Bot, Send, Mic, User, Clock, CheckCircle,
+  AlertCircle, HelpCircle, FileText, Globe, History
 } from "lucide-react";
-
-// Firebase Imports for Database
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, query, onSnapshot, orderBy } from "firebase/firestore";
-import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
+import { apiRequest } from "@/lib/queryClient";
 
 // --- Multi-language Support Setup ---
 const translations = {
@@ -30,7 +26,7 @@ const translations = {
     pastQuestions: "Past Questions",
     knowledgeBase: "Knowledge Base",
     commonQuestions: "Common Questions",
-    initialBotMessage: "Hello! I'm your Jansunwai AI Assistant. I can help you with:\n\n• Filing complaints and tracking status\n• Understanding civic processes\n• Finding the right department for your issue\n• Providing complaint guidelines\n\nHow can I assist you today?",
+    initialBotMessage: "Hello! I'm your Jansunwai AI Assistant. How can I assist you today?",
   },
   hi: {
     smartAssistant: "स्मार्ट सहायक",
@@ -43,45 +39,26 @@ const translations = {
     pastQuestions: "पिछले प्रश्न",
     knowledgeBase: "ज्ञान आधार",
     commonQuestions: "सामान्य प्रश्न",
-    initialBotMessage: "नमस्ते! मैं आपका जनसुनवाई एआई सहायक हूँ। मैं आपकी मदद कर सकता हूँ:\n\n• शिकायतें दर्ज करना और स्थिति ट्रैक करना\n• नागरिक प्रक्रियाओं को समझना\n• आपकी समस्या के लिए सही विभाग खोजना\n• शिकायत दिशानिर्देश प्रदान करना\n\nआज मैं आपकी कैसे सहायता कर सकता हूँ?",
+    initialBotMessage: "नमस्ते! मैं आपका जनसुनवाई एआई सहायक हूँ। आज मैं आपकी कैसे सहायता कर सकता हूँ?",
   }
 };
 
 interface ChatMessage {
-  id?: string; // Firestore will generate this
+  id?: string;
   type: 'user' | 'bot';
   message: string;
   timestamp: Date;
   suggestions?: string[];
 }
 
-// --- Firebase Configuration ---
-const firebaseConfig = {
-  apiKey: "AIzaSyCa1e4UrB1xxKsRdvOrDVc0B1Qeo5sYxpY",
-  authDomain: "samadhanplus-3987d.firebaseapp.com",
-  projectId: "samadhanplus-3987d",
-  storageBucket: "samadhanplus-3987d.appspot.com",
-  messagingSenderId: "508021280392",
-  appId: "1:508021280392:web:73e7fbb0bfe9774b0c193d",
-  measurementId: "G-ZSEB8QPYPB"
-};
-
-declare const __app_id: any;
-declare const __initial_auth_token: any;
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
 export default function ChatbotPage() {
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user, accessToken } = useAuth();
+  const userId = user?.id;
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
-  
-  // --- FIX: Added the missing useRef definition ---
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const t = (key: keyof typeof translations.en) => translations[language][key] || translations.en[key];
@@ -102,64 +79,47 @@ export default function ChatbotPage() {
     { title: "Emergency Procedures", description: "What to do for urgent civic issues requiring immediate attention", icon: AlertCircle, color: "bg-red-100 text-red-800" }
   ];
 
-  useEffect(() => {
-    const authUnsubscribe = onAuthStateChanged(auth, async (user) => {
-      let currentUserId;
-      if (user) {
-        currentUserId = user.uid;
-      } else {
-        const anonymousUser = await signInAnonymously(auth);
-        currentUserId = anonymousUser.user.uid;
-      }
-      setUserId(currentUserId);
-    });
-
-    if (typeof __initial_auth_token !== 'undefined' && auth.currentUser === null) {
-      signInWithCustomToken(auth, __initial_auth_token).catch(error => {
-        console.error("Custom token sign-in failed:", error);
-        signInAnonymously(auth);
-      });
-    } else if (auth.currentUser === null) {
-      signInAnonymously(auth);
-    }
-    
-    return () => authUnsubscribe();
-  }, []);
-  
+  // --- FIX: This useEffect now correctly fetches chat history from your Python backend ---
   useEffect(() => {
     if (!userId) return;
 
-    const chatHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
-    const q = query(chatHistoryCollection, orderBy("timestamp", "asc"));
+    const fetchHistory = async () => {
+      try {
+        const response = await fetch(`http://localhost:8000/api/chat/history/${userId}`);
+        if (!response.ok) throw new Error("Failed to fetch chat history");
+        
+        const history = await response.json();
+        const formattedMessages = history.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }));
 
-    const dataUnsubscribe = onSnapshot(q, (querySnapshot) => {
-      const fetchedMessages: ChatMessage[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        fetchedMessages.push({
-          id: doc.id,
-          ...data,
-          timestamp: data.timestamp.toDate(),
-        } as ChatMessage);
-      });
-      
-      if (fetchedMessages.length === 0) {
+        if (formattedMessages.length === 0) {
+          const initialMessage: ChatMessage = {
+            id: `initial-${Date.now()}`, 
+            type: 'bot', 
+            message: t('initialBotMessage'), 
+            timestamp: new Date(),
+            suggestions: [ "How to file a complaint?", "Track my complaint status" ]
+          };
+          setMessages([initialMessage]);
+        } else {
+          setMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error("Failed to fetch chat history:", error);
         const initialMessage: ChatMessage = {
-          id: '1',
-          type: 'bot',
-          message: t('initialBotMessage'),
-          timestamp: new Date(),
-          suggestions: [ "How to file a complaint?", "Track my complaint status", "Water supply issues", "Road repair request" ]
+            id: `initial-error-${Date.now()}`, 
+            type: 'bot', 
+            message: t('initialBotMessage'), 
+            timestamp: new Date(),
+            suggestions: [ "How to file a complaint?", "Track my complaint status" ]
         };
         setMessages([initialMessage]);
-      } else {
-        setMessages(fetchedMessages);
       }
-    }, (error) => {
-      console.error("Firestore snapshot error:", error);
-    });
+    };
 
-    return () => dataUnsubscribe();
+    fetchHistory();
   }, [userId, language]);
 
   useEffect(() => {
@@ -169,66 +129,39 @@ export default function ChatbotPage() {
   }, [messages, isTyping]);
 
   const getAIResponse = async (userInput: string) => {
+    if (!userId) return;
     setIsTyping(true);
     
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
-    if (!apiKey) {
-      const errorMessage: ChatMessage = {
-        type: 'bot',
-        message: "AI service is not configured. The VITE_GEMINI_API_KEY is missing from the .env file.",
-        timestamp: new Date()
-      };
-      if (userId) {
-        const chatHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
-        await addDoc(chatHistoryCollection, errorMessage);
-      }
-      setIsTyping(false);
-      return;
-    }
-    
-    const systemPrompt = `You are the Jansunwai AI Assistant for the city of Indore. Your role is to answer questions strictly related to civic issues, public complaints, government processes, and municipal services for Indore. If a user asks a question outside of this domain (e.g., about movies, celebrities, general knowledge, or personal opinions), you must politely decline to answer and guide them back to relevant topics. Answer the following user query in ${language === 'hi' ? 'Hindi' : 'English'}: "${userInput}"`;
-
-    const payload = { contents: [{ role: "user", parts: [{ text: systemPrompt }] }] };
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+    const payload = { userId, message: userInput, language };
 
     try {
-      const response = await fetch(apiUrl, {
+      const response = await fetch('http://localhost:8000/api/chat/web', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+
+      if (!response.ok) throw new Error("Failed to get response from AI service.");
+
       const result = await response.json();
-      
-      let botMessageText = "I'm sorry, I couldn't process that request. Please try asking in a different way.";
-      if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts.length > 0) {
-        botMessageText = result.candidates[0].content.parts[0].text;
-      } else if (result.error) {
-        botMessageText = `AI Error: ${result.error.message}`;
-      }
       
       const botMessage: ChatMessage = {
         type: 'bot',
-        message: botMessageText,
+        message: result?.message || "I'm sorry, I encountered an issue.",
+        suggestions: result?.suggestions || [],
         timestamp: new Date()
       };
       
-      if (userId) {
-        const chatHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
-        await addDoc(chatHistoryCollection, botMessage);
-      }
+      setMessages(prev => [...prev, botMessage]);
 
     } catch (error) {
       console.error("Error fetching AI response:", error);
       const errorMessage: ChatMessage = {
         type: 'bot',
-        message: "There was an error connecting to the AI service. Please try again later.",
+        message: "There was an error connecting to the AI service.",
         timestamp: new Date()
       };
-      if (userId) {
-        const chatHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
-        await addDoc(chatHistoryCollection, errorMessage);
-      }
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
     }
@@ -242,9 +175,19 @@ export default function ChatbotPage() {
       message: currentMessage,
       timestamp: new Date()
     };
-
-    const chatHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
-    await addDoc(chatHistoryCollection, userMessage);
+    
+    setMessages(prev => [...prev, userMessage]);
+    
+    // --- FIX: Save user message to the Python backend ---
+    try {
+        await fetch('http://localhost:8000/api/chat/history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...userMessage, userId })
+        });
+    } catch (error) {
+        console.error("Failed to save user message:", error);
+    }
     
     getAIResponse(currentMessage);
     setCurrentMessage("");
@@ -358,12 +301,8 @@ export default function ChatbotPage() {
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                     className="flex-1"
                   />
-                  <Button variant="ghost" size="icon">
-                    <Mic />
-                  </Button>
-                  <Button onClick={handleSendMessage} disabled={!currentMessage.trim() || isTyping}>
-                    <Send />
-                  </Button>
+                  <Button variant="ghost" size="icon"><Mic /></Button>
+                  <Button onClick={handleSendMessage} disabled={!currentMessage.trim() || isTyping}><Send /></Button>
                 </div>
               </div>
             </Card>
@@ -390,7 +329,7 @@ export default function ChatbotPage() {
             </Card>
           </div>
 
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg-col-span-1 space-y-6">
             <Card>
               <CardHeader><CardTitle className="text-lg">{t('pastQuestions')}</CardTitle></CardHeader>
               <CardContent className="space-y-2">
