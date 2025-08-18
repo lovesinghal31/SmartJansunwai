@@ -20,52 +20,33 @@ import {
   QrCode,
   Camera,
   Download,
+  Loader2
 } from "lucide-react";
 
-// --- STEP 1: Import Leaflet components, hooks, AND STYLESHEET ---
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L, { LatLngBoundsExpression } from 'leaflet';
-import 'leaflet/dist/leaflet.css'; // This is the crucial fix for rendering issues.
+import 'leaflet/dist/leaflet.css';
 
 import type { Complaint } from "@shared/schema";
 
-interface MapComplaint extends Complaint {
+interface MapComplaint extends Omit<Complaint, '_id' | 'createdAt' | 'updatedAt'> {
+  _id: string; 
+  createdAt: string;
+  updatedAt: string;
   coordinates: { lat: number; lng: number };
-  wardNumber: number;
-  landmark: string;
+  wardNumber?: number;
+  landmark?: string;
 }
 
+const defaultIcon = new L.Icon({
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+});
+
 const getLeafletIcon = (category: string) => {
-  const basePath = "/icons/";
-  let iconUrl = `${basePath}default-pin.svg`;
-
-  switch (category) {
-    case "road-transportation":
-      iconUrl = `${basePath}road-icon.svg`;
-      break;
-    case "water-supply":
-      iconUrl = `${basePath}water-icon.svg`;
-      break;
-    case "sanitation":
-      iconUrl = `${basePath}sanitation-icon.svg`;
-      break;
-    case "street-lighting":
-      iconUrl = `${basePath}light-icon.svg`;
-      break;
-    case "parks-recreation":
-      iconUrl = `${basePath}park-icon.svg`;
-      break;
-    case "electricity":
-      iconUrl = `${basePath}electricity-icon.svg`;
-      break;
-  }
-
-  return new L.Icon({
-    iconUrl: iconUrl,
-    iconSize: [38, 38],
-    iconAnchor: [19, 38],
-    popupAnchor: [0, -38]
-  });
+  return defaultIcon;
 };
 
 const MapAutoFitter = ({ complaints }: { complaints: MapComplaint[] }) => {
@@ -73,7 +54,7 @@ const MapAutoFitter = ({ complaints }: { complaints: MapComplaint[] }) => {
 
   useEffect(() => {
     if (complaints.length === 0) {
-      map.setView([22.7196, 75.8577], 12);
+      map.setView([22.7196, 75.8577], 12); // Default to Indore
       return;
     }
 
@@ -89,55 +70,40 @@ const MapAutoFitter = ({ complaints }: { complaints: MapComplaint[] }) => {
 
 
 export default function ComplaintMapPage() {
-  const { user } = useAuth();
+  const { user } = useAuth(); 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedWard, setSelectedWard] = useState("all");
   const [searchLocation, setSearchLocation] = useState("");
 
-  const { data: complaintsFromApi = [], isLoading } = useQuery<MapComplaint[]>({
-    queryKey: ["complaints"],
+  // --- FIX: Fetch live data from your Python AI backend ---
+  const { data: allComplaints = [], isLoading } = useQuery<MapComplaint[]>({
+    queryKey: ["/api/complaints/map"],
     queryFn: async () => {
-      return new Promise(resolve => setTimeout(() => resolve(mapComplaints), 1000));
+        // This now correctly calls your Python server
+        const response = await fetch("http://localhost:8000/api/complaints/map");
+        if (!response.ok) {
+            throw new Error("Failed to fetch map data from AI service");
+        }
+        return response.json();
     },
     enabled: !!user,
   });
 
-  const mapComplaints: MapComplaint[] = [
-    {
-      id: "1", citizenId: "user1", title: "Pothole on MG Road", description: "Large pothole causing traffic issues",
-      category: "road-transportation", location: "MG Road, near Palasia Square", priority: "high", status: "in-progress",
-      assignedTo: undefined, attachments: undefined, createdAt: new Date("2024-01-15"), updatedAt: new Date("2024-01-16"),
-      coordinates: { lat: 22.7196, lng: 75.8577 }, wardNumber: 12, landmark: "Palasia Square"
-    },
-    {
-      id: "2", citizenId: "user2", title: "Water supply disruption", description: "No water supply for 3 days",
-      category: "water-supply", location: "Vijay Nagar, Sector 1", priority: "high", status: "submitted",
-      assignedTo: undefined, attachments: undefined, createdAt: new Date("2024-01-14"), updatedAt: new Date("2024-01-14"),
-      coordinates: { lat: 22.7532, lng: 75.8937 }, wardNumber: 8, landmark: "Vijay Nagar Main Road"
-    },
-    {
-      id: "3", citizenId: "user3", title: "Street light not working", description: "Street light pole #SL-456 not functioning",
-      category: "street-lighting", location: "AB Road, near Geeta Bhawan", priority: "medium", status: "resolved",
-      assignedTo: undefined, attachments: undefined, createdAt: new Date("2024-01-10"), updatedAt: new Date("2024-01-12"),
-      coordinates: { lat: 22.7074, lng: 75.8723 }, wardNumber: 15, landmark: "Geeta Bhawan"
-    },
-  ];
-
-  const complaintsToDisplay = complaintsFromApi.length > 0 ? complaintsFromApi : mapComplaints;
-
-  const filteredComplaints = complaintsToDisplay.filter(complaint => {
+  const filteredComplaints = allComplaints.filter(complaint => {
     const matchesCategory = selectedCategory === "all" || complaint.category === selectedCategory;
     const matchesStatus = selectedStatus === "all" || complaint.status === selectedStatus;
-    const matchesWard = selectedWard === "all" || complaint.wardNumber.toString() === selectedWard;
+    const matchesWard = selectedWard === "all" || (complaint.wardNumber && complaint.wardNumber.toString() === selectedWard);
     const matchesLocation = complaint.location.toLowerCase().includes(searchLocation.toLowerCase()) ||
-                            (complaint.landmark && complaint.landmark.toLowerCase().includes(searchLocation.toLowerCase()));
+                              (complaint.landmark && complaint.landmark.toLowerCase().includes(searchLocation.toLowerCase()));
     return matchesCategory && matchesStatus && matchesWard && matchesLocation;
   });
 
-  const wardStats = complaintsToDisplay.reduce((acc, complaint) => {
+  const wardStats = allComplaints.reduce((acc, complaint) => {
     const ward = complaint.wardNumber;
-    acc[ward] = (acc[ward] || 0) + 1;
+    if (ward) {
+        acc[ward] = (acc[ward] || 0) + 1;
+    }
     return acc;
   }, {} as Record<number, number>);
 
@@ -170,24 +136,24 @@ export default function ComplaintMapPage() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{complaintsToDisplay.length}</div>
+                    <div className="text-2xl font-bold text-blue-600">{isLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : allComplaints.length}</div>
                     <div className="text-xs text-gray-600">Total Active</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-red-600">
-                      {complaintsToDisplay.filter(c => c.priority === "high").length}
+                      {isLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : allComplaints.filter(c => c.priority === "high").length}
                     </div>
                     <div className="text-xs text-gray-600">High Priority</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-yellow-600">
-                      {complaintsToDisplay.filter(c => c.status === "in-progress").length}
+                      {isLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : allComplaints.filter(c => c.status === "in-progress").length}
                     </div>
                     <div className="text-xs text-gray-600">In Progress</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">
-                      {complaintsToDisplay.filter(c => c.status === "resolved").length}
+                      {isLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : allComplaints.filter(c => c.status === "resolved").length}
                     </div>
                     <div className="text-xs text-gray-600">Resolved</div>
                   </div>
@@ -251,20 +217,13 @@ export default function ComplaintMapPage() {
             <Card>
               <CardHeader><CardTitle className="text-lg">Quick Actions</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start">
-                  <Camera size={16} className="mr-2" /> Photo Complaint
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Navigation size={16} className="mr-2" /> Location-based
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <MapPin size={16} className="mr-2" /> Nearby Issues
-                </Button>
+                <Button variant="outline" className="w-full justify-start"><Camera size={16} className="mr-2" /> Photo Complaint</Button>
+                <Button variant="outline" className="w-full justify-start"><Navigation size={16} className="mr-2" /> Location-based</Button>
+                <Button variant="outline" className="w-full justify-start"><MapPin size={16} className="mr-2" /> Nearby Issues</Button>
               </CardContent>
             </Card>
           </div>
 
-          {/* --- FIX: The right column now contains the map AND the ward stats --- */}
           <div className="lg:col-span-3 space-y-6">
             <Card className="h-[700px] overflow-hidden">
               <CardHeader className="border-b">
@@ -275,7 +234,7 @@ export default function ComplaintMapPage() {
               </CardHeader>
               <CardContent className="p-0 h-full">
                 {isLoading ? (
-                  <div className="flex items-center justify-center h-full text-gray-500">Loading Map Data...</div>
+                  <div className="flex items-center justify-center h-full text-gray-500"><Loader2 className="h-6 w-6 animate-spin mr-2"/>Loading Map Data...</div>
                 ) : (
                   <MapContainer 
                     center={[22.7196, 75.8577]}
@@ -292,7 +251,7 @@ export default function ComplaintMapPage() {
                     />
                     {filteredComplaints.map((complaint) => (
                       <Marker 
-                        key={complaint.id} 
+                        key={complaint._id} 
                         position={[complaint.coordinates.lat, complaint.coordinates.lng]}
                         icon={getLeafletIcon(complaint.category)}
                       >
@@ -301,8 +260,8 @@ export default function ComplaintMapPage() {
                             <h4 className="font-bold text-md text-gray-800 mb-1">{complaint.title}</h4>
                             <p className="text-sm text-gray-600 mb-2">{complaint.description}</p>
                             <div className="flex items-center justify-between text-xs text-gray-500 border-t pt-2">
-                              <span>📍 {complaint.landmark}</span>
-                              <Badge variant="secondary">Ward {complaint.wardNumber}</Badge>
+                              <span>📍 {complaint.location}</span>
+                              <Badge variant="secondary">{complaint.status}</Badge>
                             </div>
                           </div>
                         </Popup>
@@ -311,24 +270,6 @@ export default function ComplaintMapPage() {
                     <MapAutoFitter complaints={filteredComplaints} />
                   </MapContainer>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* --- FIX: Ward-wise stats card is now here, below the map --- */}
-            <Card>
-              <CardHeader><CardTitle>Ward-wise Complaint Distribution</CardTitle></CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {Object.entries(wardStats).map(([ward, count]) => (
-                    <div key={ward} className="text-center p-3 bg-gray-50 rounded-lg">
-                      <div className="text-lg font-bold text-gray-900">Ward {ward}</div>
-                      <div className="text-sm text-gray-600">{count as number} complaints</div>
-                      <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                        <div className="bg-primary-600 h-2 rounded-full" style={{ width: `${((count as number) / Math.max(...Object.values(wardStats))) * 100}%` }}></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </CardContent>
             </Card>
           </div>

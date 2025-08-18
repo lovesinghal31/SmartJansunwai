@@ -171,7 +171,7 @@ export default function HomePage() {
                 <CardDescription className="text-center text-gray-600">Let our AI assist you in filing your complaint.</CardDescription>
               </CardHeader>
               <CardContent className="p-8">
-                <AIComplaintForm onNavigateToTrack={() => navigate('/track-complaint')} />
+                <AIComplaintForm />
               </CardContent>
             </Card>
           </div>

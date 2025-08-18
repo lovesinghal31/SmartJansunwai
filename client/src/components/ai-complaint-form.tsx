@@ -43,8 +43,7 @@ const getPriorityBadgeClass = (priority: "Low" | "Medium" | "High") => {
   }
 };
 
-// This component now takes a function to handle navigation
-export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTrack: () => void }) {
+export default function AIComplaintForm() {
   const [formStep, setFormStep] = useState<'initial' | 'preview' | 'submitted'>('initial');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isLocationLoading, setIsLocationLoading] = useState(false);
@@ -54,22 +53,28 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
   const { toast } = useToast();
   const { accessToken } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { register, handleSubmit, control, watch, getValues, setValue, reset, formState: { errors } } = useForm<ComplaintFormData>({
     resolver: zodResolver(complaintSchema),
   });
 
-  const navigate = useNavigate();
   const formData = watch();
 
   const createComplaintMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/complaints", data, accessToken);
-      if (!res.ok) throw new Error("Request failed");
+      if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ message: "An unknown error occurred" }));
+          throw new Error(errorData.message || `Request failed with status ${res.status}`);
+      }
       return res.json();
     },
     onSuccess: (data) => {
+      // --- FIX: Invalidate both the main complaints list AND the map data ---
       queryClient.invalidateQueries({ queryKey: ["/api/complaints"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/complaints/map"] });
+
       toast({ title: "Complaint Submitted!", description: `Your complaint ID is ${data.id}.` });
       setComplaintId(data.id);
       setFormStep('submitted');
@@ -79,34 +84,26 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
 
   const handleAnalyzeComplaint: SubmitHandler<ComplaintFormData> = async (data) => {
     setIsAiLoading(true);
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      toast({ title: "Configuration Error", description: "Gemini API key is not configured.", variant: "destructive" });
-      setIsAiLoading(false);
-      return;
-    }
-
-    const prompt = `Act as a strict civic complaint validator for a system in India. Analyze the following complaint. **Rules:** 1. **Location Check:** The location must be a plausible, real place within India. Reject locations from other countries (e.g., Pakistan) or nonsensical places. 2. **Content Analysis:** The description is the most important field. If the user's chosen category contradicts the description, trust the description to assign the correct category. 3. **Validity Check:** The complaint must be a genuine, specific issue. Reject vague complaints (e.g., "problem in my country/mulk"), gibberish, or test messages. **Complaint Data:** - User's Chosen Category: "${data.category}" - Title: "${data.title}" - Description: "${data.description}" - Location: "${data.location}" **Your Task:** Respond ONLY with a valid JSON object. Do not include any other text or markdown. **JSON Structure:** { "priority": "Low" | "Medium" | "High", "isComplaintValid": boolean, "reasoning": "If invalid, provide a brief, user-friendly reason. Otherwise, an empty string.", "suggestedCategory": "Water Supply" | "Roads & Transportation" | "Electricity" | "Sanitation" | "Street Lighting" | "Parks & Recreation", "estimatedResolutionDays": integer between 1 and 14 }`;
-
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
+      const response = await fetch('http://localhost:8000/api/ai/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error("AI API request failed");
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "AI analysis failed");
+      }
       
-      const result = await response.json();
-      const aiResponseText = result.candidates[0].content.parts[0].text;
-      const parsedAiResult: AIAnalysisResult = JSON.parse(aiResponseText.replace(/```json|```/g, '').trim());
+      const parsedAiResult: AIAnalysisResult = await response.json();
 
       if (!parsedAiResult.isComplaintValid) {
         toast({
           title: "Invalid Complaint",
-          description: parsedAiResult.reasoning || "The AI determined this is not a valid complaint. Please provide specific details.",
+          description: parsedAiResult.reasoning || "The AI determined this is not a valid complaint.",
           variant: "destructive",
         });
-        setIsAiLoading(false);
         return;
       }
       
@@ -114,9 +111,10 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
       setAiResult(parsedAiResult);
       setComplaintId(`CMP-${Date.now().toString().slice(-6)}`);
       setFormStep('preview');
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("AI Analysis Error:", error);
-      toast({ title: "AI Analysis Failed", description: "Could not analyze the complaint.", variant: "destructive" });
+      toast({ title: "AI Analysis Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsAiLoading(false);
     }
@@ -127,12 +125,15 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
         toast({ title: "Password Required", description: "Please create a password of at least 6 characters.", variant: "destructive" });
         return;
     }
-
-    const categoryMap: Record<string, string> = { "Roads & Transportation": "road-transportation", "Water Supply": "water-supply", "Electricity": "electricity", "Sanitation": "sanitation", "Street Lighting": "street-lighting", "Parks & Recreation": "parks-recreation" };
     const values = getValues();
+    const categoryMap: Record<string, string> = {
+        "Roads & Transportation": "road-transportation", "Water Supply": "water-supply",
+        "Electricity": "electricity", "Sanitation": "sanitation",
+        "Street Lighting": "street-lighting", "Parks & Recreation": "parks-recreation",
+    };
     const backendCategory = categoryMap[values.category] || values.category.toLowerCase().replace(/ /g, '-');
-    
-    const finalData = { ...values, category: backendCategory, priority: aiResult?.priority.toLowerCase() || 'medium', password: password };
+    const priority = (aiResult?.priority || 'medium').toLowerCase();
+    const finalData = { ...values, category: backendCategory, priority: priority, password: password };
     createComplaintMutation.mutate(finalData);
   };
 
@@ -143,7 +144,6 @@ export default function AIComplaintForm({ onNavigateToTrack }: { onNavigateToTra
       setIsLocationLoading(false);
       return;
     }
-
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
