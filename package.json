@@ -50,6 +50,7 @@
     "@types/mongoose": "^5.11.96",
     "@types/react-router-dom": "^5.3.3",
     "bcryptjs": "^3.0.2",
+    "body-parser": "^2.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -70,7 +71,7 @@
     "lucide-react": "^0.453.0",
     "memorystore": "^1.6.7",
     "mongodb": "^6.18.0",
-    "mongoose": "^8.17.0",
+    "mongoose": "^8.17.1",
     "nanoid": "^5.1.5",
     "next-themes": "^0.4.6",
     "passport": "^0.7.0",
@@ -126,5 +127,17 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
-  }
+  },
+  "description": "This is a comprehensive civic grievance redressal system called \"Jansunwai\" for Indore Smart City. The application enables citizens to submit complaints about civic issues and allows government officials to manage and track the resolution of these complaints. The system features role-based access control with separate dashboards for citizens and officials, complaint tracking, feedback mechanisms, and analytics capabilities.",
+  "main": "create-test-complaint.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lovesinghal31/SmartJansunwai.git"
+  },
+  "keywords": [],
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/lovesinghal31/SmartJansunwai/issues"
+  },
+  "homepage": "https://github.com/lovesinghal31/SmartJansunwai#readme"
 }

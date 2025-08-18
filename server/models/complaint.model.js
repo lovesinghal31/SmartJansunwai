@@ -24,6 +24,22 @@ const complaintSchema = new mongoose.Schema({
   status: { type: String, required: true, default: 'submitted' },
   assignedTo: { type: String },
   attachments: [{ type: String }],
+
+   // --- New: Source Tracking (IVR, WhatsApp, Web, etc.) ---
+  source: { type: String, enum: ['IVR', 'WhatsApp', 'Web', 'MobileApp'], default: 'Web' },
+
+  // --- New: IVR-specific fields ---
+  ivr: {
+    recordingUrl: { type: String },     // if you save the call recording
+    transcriptionText: { type: String } // speech-to-text result
+  },
+
+  // --- New: WhatsApp-specific fields ---
+  whatsapp: {
+    messageId: { type: String }, // Twilio/Gupshup message ID
+    rawText: { type: String }    // original WhatsApp message
+  }
+
 }, {
   timestamps: true // This automatically adds createdAt and updatedAt fields
 });
