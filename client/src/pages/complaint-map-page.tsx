@@ -39,6 +39,13 @@ interface MapComplaint extends Omit<Complaint, '_id' | 'createdAt' | 'updatedAt'
   landmark?: string;
 }
 
+interface MapStats {
+    totalActive: number;
+    highPriority: number;
+    inProgress: number;
+    resolved: number;
+}
+
 const defaultIcon = new L.Icon({
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
     iconSize: [25, 41],
@@ -77,11 +84,9 @@ export default function ComplaintMapPage() {
   const [selectedWard, setSelectedWard] = useState("all");
   const [searchLocation, setSearchLocation] = useState("");
 
-  // --- FIX: Fetch live data from your Python AI backend ---
-  const { data: allComplaints = [], isLoading } = useQuery<MapComplaint[]>({
+  const { data: allComplaints = [], isLoading: isLoadingMap } = useQuery<MapComplaint[]>({
     queryKey: ["/api/complaints/map"],
     queryFn: async () => {
-        // This now correctly calls your Python server
         const response = await fetch("http://localhost:8000/api/complaints/map");
         if (!response.ok) {
             throw new Error("Failed to fetch map data from AI service");
@@ -89,6 +94,19 @@ export default function ComplaintMapPage() {
         return response.json();
     },
     enabled: !!user,
+  });
+
+  const { data: mapStats, isLoading: isLoadingStats } = useQuery<MapStats>({
+    queryKey: ["/api/stats/map"],
+    queryFn: async () => {
+        const response = await fetch("http://localhost:8000/api/stats/map");
+        if (!response.ok) {
+            throw new Error("Failed to fetch map stats");
+        }
+        return response.json();
+    },
+    enabled: !!user,
+    placeholderData: { totalActive: 0, highPriority: 0, inProgress: 0, resolved: 0 }
   });
 
   const filteredComplaints = allComplaints.filter(complaint => {
@@ -137,24 +155,24 @@ export default function ComplaintMapPage() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{isLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : allComplaints.length}</div>
+                    <div className="text-2xl font-bold text-blue-600">{isLoadingStats ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : mapStats?.totalActive}</div>
                     <div className="text-xs text-gray-600">Total Active</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-red-600">
-                      {isLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : allComplaints.filter(c => c.priority === "high").length}
+                      {isLoadingStats ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : mapStats?.highPriority}
                     </div>
                     <div className="text-xs text-gray-600">High Priority</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-yellow-600">
-                      {isLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : allComplaints.filter(c => c.status === "in-progress").length}
+                      {isLoadingStats ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : mapStats?.inProgress}
                     </div>
                     <div className="text-xs text-gray-600">In Progress</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">
-                      {isLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : allComplaints.filter(c => c.status === "resolved").length}
+                      {isLoadingStats ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : mapStats?.resolved}
                     </div>
                     <div className="text-xs text-gray-600">Resolved</div>
                   </div>
@@ -175,28 +193,28 @@ export default function ComplaintMapPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Category</label>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger><SelectValue placeholder={categoriesLoading ? "Loading..." : "All Categories"} /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
-                      {categoriesLoading && <div className="p-2 text-gray-500">Loading...</div>}
-                      {categoriesError && <div className="p-2 text-red-500">{categoriesError}</div>}
-                      {!categoriesLoading && !categoriesError && categories.map((cat) => (
-                        <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
-                      ))}
+                      <SelectItem value="road-transportation">Roads & Transportation</SelectItem>
+                      <SelectItem value="water-supply">Water Supply</SelectItem>
+                      <SelectItem value="electricity">Electricity</SelectItem>
+                      <SelectItem value="sanitation">Sanitation</SelectItem>
+                      <SelectItem value="street-lighting">Street Lighting</SelectItem>
+                      <SelectItem value="parks-recreation">Parks & Recreation</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
                   <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger><SelectValue placeholder={statusLoading ? "Loading..." : "All Status"} /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="All Status" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      {statusLoading && <div className="p-2 text-gray-500">Loading...</div>}
-                      {statusError && <div className="p-2 text-red-500">{statusError}</div>}
-                      {!statusLoading && !statusError && statusOptions.map((status) => (
-                        <SelectItem key={status.value} value={status.value}>{status.displayLabel}</SelectItem>
-                      ))}
+                      <SelectItem value="submitted">New</SelectItem>
+                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="under-review">Under Review</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -234,7 +252,7 @@ export default function ComplaintMapPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0 h-full">
-                {isLoading ? (
+                {isLoadingMap ? (
                   <div className="flex items-center justify-center h-full text-gray-500"><Loader2 className="h-6 w-6 animate-spin mr-2"/>Loading Map Data...</div>
                 ) : (
                   <MapContainer 
