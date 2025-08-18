@@ -243,9 +243,11 @@ export default function Header() {
                         Dashboard
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/setting")}>
-                      <Settings size={16} className="mr-2" />
-                      Settings
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile/settings">
+                        <Settings size={16} className="mr-2" />
+                        Settings
+                      </Link>
                     </DropdownMenuItem>
 
                     <DropdownMenuSeparator />
