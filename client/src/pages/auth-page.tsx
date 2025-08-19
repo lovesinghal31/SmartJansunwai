@@ -117,7 +117,7 @@ export default function AuthPage() {
               className="w-10 h-10 object-contain mr-2"
             />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Jansunwai</h1>
+              <h1 className="text-2xl font-bold text-gray-900">SAMADHAN+</h1>
               <p className="text-sm text-gray-600">Indore Smart City</p>
             </div>
           </div>
