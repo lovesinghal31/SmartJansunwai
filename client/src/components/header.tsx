@@ -1,4 +1,3 @@
-//import { Link, useLocation } from "react-router-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
@@ -25,7 +24,6 @@ import {
 } from "lucide-react";
 import LanguageSwitcher from "./language-switcher";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useSocket } from "@/hooks/useSocket";
 import { apiRequest } from "@/lib/queryClient";
 import { Notification } from "../../../shared/schema";
 import Logo from "./logo.png"; // Adjust the path as necessary
@@ -34,19 +32,17 @@ import { useToast } from "@/hooks/use-toast";
 export default function Header() {
   const navigate = useNavigate();
   const { user, logoutMutation, accessToken } = useAuth();
-  const location = useLocation(); // react-router-dom's useLocation returns an object
+  const location = useLocation();
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  // --- FIX: The `enabled` property now depends on `user.id` instead of the whole `user` object ---
-  // This prevents the query from re-running unnecessarily and causing an infinite loop.
   const {
     data: notifications = [],
     isLoading: notificationsLoading,
     isError: notificationsError,
     refetch: refetchNotifications,
   } = useQuery<Notification[]>({
-    queryKey: ["/api/notifications", user?.id], // Added user.id to the queryKey for better caching
+    queryKey: ["/api/notifications", user?.id],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/notifications", undefined, accessToken);
       if (!res.ok) {
@@ -54,22 +50,22 @@ export default function Header() {
       }
       return res.json();
     },
-    enabled: !!user?.id && !!accessToken, // This is the key change to prevent the loop
-    refetchInterval: 10000, // Increased interval to reduce unnecessary requests
+    enabled: !!user?.id && !!accessToken,
+    refetchInterval: 10000,
   });
 
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("PUT", `/api/notifications/${id}/read`, undefined, accessToken);
     },
-    onSuccess: () => refetchNotifications(), // Refetch after marking as read
+    onSuccess: () => refetchNotifications(),
   });
 
   const deleteNotificationMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/notifications/${id}`, undefined, accessToken);
     },
-    onSuccess: () => refetchNotifications(), // Refetch after deleting
+    onSuccess: () => refetchNotifications(),
   });
 
   const unreadCount =
@@ -136,7 +132,6 @@ export default function Header() {
               </Link>
             </div>
           </div>
-</div>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-1">
@@ -197,7 +192,7 @@ export default function Header() {
                       <div className="p-4 text-center text-sm text-red-500">Failed to load.</div>
                     ) : notifications.length > 0 ? (
                       notifications.map((n: Notification) => (
-                        <div key={n.id} className={`p-3 border-b last:border-b-0 ${!n.isRead ? 'bg-blue-50' : ''}</div>`}>
+                        <div key={n.id} className={`p-3 border-b last:border-b-0 ${!n.isRead ? 'bg-blue-50' : ''}`}>
                           <div className="flex justify-between items-start">
                             <div className="flex-grow cursor-pointer" onClick={() => handleNotificationClick(n)}>
                               <p className="font-semibold text-sm">{n.title}</p>
@@ -267,6 +262,8 @@ export default function Header() {
             )}
           </div>
         </div>
+        {/* <!-- FIX: This closing div was moved to the correct position --> */}
+      </div>
     </header>
   );
 }

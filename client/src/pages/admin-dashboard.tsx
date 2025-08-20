@@ -32,7 +32,9 @@ import {
   AlertTriangle,
   TrendingUp,
   BarChart3,
-  Eye
+  Eye,
+  UserX,
+  Search
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
@@ -111,6 +113,16 @@ export default function AdminDashboard() {
     },
     enabled: !!accessToken,
   });
+  
+  const { data: pendingUsers = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/pending-users"],
+    queryFn: async () => {
+        const res = await apiRequest("GET", "/api/admin/users/pending", undefined, accessToken);
+        if (!res.ok) throw new Error("Failed to fetch pending users");
+        return res.json();
+    },
+    enabled: !!accessToken,
+  });
 
   const { data: slaSettings = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/sla-settings"],
@@ -138,6 +150,63 @@ export default function AdminDashboard() {
     },
     enabled: !!accessToken,
   });
+
+  
+// --- FIX: This mutation now calls the Python backend directly ---
+  const scanSocialMediaMutation = useMutation({
+    mutationFn: async () => {
+        const response = await fetch("http://localhost:8000/api/social-media/scan", { method: 'POST' });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: "Scan failed with no details" }));
+            throw new Error(errorData.detail);
+        }
+        return response.json();
+    },
+    onSuccess: (data) => {
+        toast({ title: "Scan Complete", description: data.message });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-social"] });
+    },
+    onError: (error: any) => toast({ title: "Scan Failed", description: error.message, variant: "destructive" }),
+  });
+
+  const { data: socialComplaints = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/pending-social"],
+    queryFn: async () => {
+        const res = await apiRequest("GET", "/api/admin/pending-social", undefined, accessToken);
+        if (!res.ok) throw new Error("Failed to fetch social media complaints");
+        return res.json();
+    },
+    enabled: !!accessToken,
+  });
+
+  const approveSocialMutation = useMutation({
+    mutationFn: async (complaintId: string) => {
+        const res = await apiRequest("PUT", `/api/admin/pending-social/${complaintId}/approve`, {}, accessToken);
+        if (!res.ok) throw new Error("Approval failed");
+        return res.json();
+    },
+    onSuccess: (data) => {
+        toast({ title: "Complaint Approved", description: data.message });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-social"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/complaints"] });
+    },
+    onError: (error: any) => toast({ title: "Approval Failed", description: error.message, variant: "destructive" }),
+  });
+
+  const rejectSocialMutation = useMutation({
+    mutationFn: async (complaintId: string) => {
+        const res = await apiRequest("DELETE", `/api/admin/pending-social/${complaintId}/reject`, undefined, accessToken);
+        if (!res.ok) throw new Error("Rejection failed");
+        return res.json();
+    },
+    onSuccess: (data) => {
+        toast({ title: "Complaint Rejected", description: data.message });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-social"] });
+    },
+    onError: (error: any) => toast({ title: "Rejection Failed", description: error.message, variant: "destructive" }),
+  });
+
+  
 
   // Department mutations
   const createDepartmentMutation = useMutation({
@@ -187,7 +256,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // User mutations
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
       const res = await apiRequest("PUT", `/api/admin/users/${id}`, data, accessToken);
@@ -198,6 +266,33 @@ export default function AdminDashboard() {
       setUserDialog(false);
       toast({ title: "User updated successfully" });
     },
+  });
+
+  const approveUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+        const res = await apiRequest("PUT", `/api/admin/users/${userId}/approve`, {}, accessToken);
+        if (!res.ok) throw new Error("Failed to approve user");
+        return res.json();
+    },
+    onSuccess: () => {
+        toast({ title: "User Approved", description: "The official's account has been activated." });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-users"] });
+    },
+    onError: (error: any) => toast({ title: "Approval Failed", description: error.message, variant: "destructive" }),
+  });
+
+  const rejectUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+        const res = await apiRequest("DELETE", `/api/admin/users/${userId}/reject`, undefined, accessToken);
+        if (!res.ok) throw new Error("Failed to reject user");
+        return res.json();
+    },
+    onSuccess: () => {
+        toast({ title: "User Rejected", description: "The registration request has been deleted." });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-users"] });
+    },
+    onError: (error: any) => toast({ title: "Rejection Failed", description: error.message, variant: "destructive" }),
   });
 
   // Notification mutation
@@ -299,6 +394,7 @@ export default function AdminDashboard() {
           <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="board">Complaints Board</TabsTrigger>
+            <TabsTrigger value="social">Social Media</TabsTrigger>
             <TabsTrigger value="departments">Departments</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="sla">SLA Settings</TabsTrigger>
@@ -486,55 +582,82 @@ export default function AdminDashboard() {
               </Table>
             </Card>
           </TabsContent>
-
+          
+          
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">User Management</h2>
-              <div className="flex space-x-2">
-                <Badge variant="outline">{users.filter(u => u.role === "citizen").length} Citizens</Badge>
-                <Badge variant="outline">{users.filter(u => u.role === "official").length} Officials</Badge>
-                <Badge variant="outline">{users.filter(u => u.role === "admin").length} Admins</Badge>
-              </div>
-            </div>
-
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Username</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((user: any) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.username}</TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          user.role === "admin" ? "default" : 
-                          user.role === "official" ? "secondary" : "outline"
-                        }>
-                          {user.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{user.department || "N/A"}</TableCell>
-                      <TableCell>{user.email || "N/A"}</TableCell>
-                      <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => handleEditUser(user)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
+            <Tabs defaultValue="all-users" className="w-full">
+                <TabsList>
+                    <TabsTrigger value="all-users">All Users</TabsTrigger>
+                    <TabsTrigger value="pending-approvals">
+                        Pending Approvals
+                        {pendingUsers.length > 0 && (
+                            <Badge className="ml-2 bg-yellow-500 text-white">{pendingUsers.length}</Badge>
+                        )}
+                    </TabsTrigger>
+                </TabsList>
+                <TabsContent value="all-users">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>All System Users</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader><TableRow><TableHead>Username</TableHead><TableHead>Role</TableHead><TableHead>Department</TableHead><TableHead>Email</TableHead><TableHead>Joined</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                {users.map((user: any) => (
+                                    <TableRow key={user.id}>
+                                    <TableCell className="font-medium">{user.username}</TableCell>
+                                    <TableCell><Badge variant={user.role === "admin" ? "default" : user.role === "official" ? "secondary" : "outline"}>{user.role}</Badge></TableCell>
+                                    <TableCell>{user.department || "N/A"}</TableCell>
+                                    <TableCell>{user.email || "N/A"}</TableCell>
+                                    <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                                    <TableCell>
+                                        <Button variant="outline" size="sm" onClick={() => handleEditUser(user)}>
+                                        <Edit className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                    </TableRow>
+                                ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="pending-approvals">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Official Account Requests</CardTitle>
+                            <CardDescription>Approve or reject requests from users to become Government Officials.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader><TableRow><TableHead>Username</TableHead><TableHead>Contact</TableHead><TableHead>Requested Department</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                {pendingUsers.map((user: any) => (
+                                    <TableRow key={user.id}>
+                                    <TableCell className="font-medium">{user.username}</TableCell>
+                                    <TableCell>{user.contact || "N/A"}</TableCell>
+                                    <TableCell>{user.department || "N/A"}</TableCell>
+                                    <TableCell className="space-x-2">
+                                        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => approveUserMutation.mutate(user.id)}>
+                                            <UserCheck className="h-4 w-4 mr-2"/> Approve
+                                        </Button>
+                                        <Button variant="destructive" size="sm" onClick={() => rejectUserMutation.mutate(user.id)}>
+                                            <UserX className="h-4 w-4 mr-2"/> Reject
+                                        </Button>
+                                    </TableCell>
+                                    </TableRow>
+                                ))}
+                                </TableBody>
+                            </Table>
+                            {pendingUsers.length === 0 && (
+                                <div className="text-center p-8 text-gray-500">No pending approvals.</div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
           </TabsContent>
 
           {/* SLA Settings Tab */}
@@ -691,6 +814,59 @@ export default function AdminDashboard() {
               </Card>
             </div>
           </TabsContent>
+
+          {/* --- NEW: Content for the Social Media Monitor Tab --- */}
+          <TabsContent value="social" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>Social Media Monitor</CardTitle>
+                        <CardDescription>Scan social platforms for potential civic issues and create complaints.</CardDescription>
+                    </div>
+                    <Button onClick={() => scanSocialMediaMutation.mutate()} disabled={scanSocialMediaMutation.isPending}>
+                        <Search className="h-4 w-4 mr-2"/>
+                        {scanSocialMediaMutation.isPending ? "Scanning..." : "Scan Now"}
+                    </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Post Text</TableHead>
+                      <TableHead>AI Category</TableHead>
+                      <TableHead>AI Priority</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {socialComplaints.map((post: any) => (
+                      <TableRow key={post._id}>
+                        <TableCell><Badge variant="outline">{post.source}</Badge></TableCell>
+                        <TableCell className="max-w-md">{post.text}</TableCell>
+                        <TableCell><Badge>{post.suggestedCategory}</Badge></TableCell>
+                        <TableCell><Badge variant={post.suggestedPriority === 'High' ? 'destructive' : 'secondary'}>{post.suggestedPriority}</Badge></TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => approveSocialMutation.mutate(post._id)}>
+                            <UserCheck className="h-4 w-4 mr-2"/> Approve
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => rejectSocialMutation.mutate(post._id)}>
+                            <UserX className="h-4 w-4 mr-2"/> Reject
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {socialComplaints.length === 0 && (
+                    <div className="text-center p-8 text-gray-500">No pending social media complaints found. Click "Scan Now" to search.</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
 
           {/* Audit Logs Tab */}
           <TabsContent value="audit" className="space-y-4">

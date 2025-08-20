@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Search, Filter, Download, BarChart3, Clock, AlertTriangle, Loader2 } from "lucide-react";
+import { Search, Download, BarChart3, Clock, AlertTriangle, Loader2 } from "lucide-react";
 import type { Complaint } from "@shared/schema";
 import { useNavigate } from "react-router-dom";
 
@@ -21,82 +21,23 @@ import { useNavigate } from "react-router-dom";
 interface ComplaintStats {
   total: number;
   byStatus: Record<string, number>;
-  byCategory: Record<string, number>;
   byPriority: Record<string, number>;
   overdue: number;
   resolvedToday: number;
   avgResolutionDays: number;
 }
 
-// Type for category fetched from backend
-interface CategoryOption {
-  name: string;
-  id: string;
-  slug: string;
-}
-
-// Type for status options from backend
-interface StatusOption {
-  value: string;
-  label: string;
-  displayLabel: string;
-}
-
 export default function OfficialDashboard() {
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
-  
-  const [statusOptions, setStatusOptions] = useState<StatusOption[]>([]);
-  const [statusLoading, setStatusLoading] = useState(true);
-  const [statusError, setStatusError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchCategories() {
-      setCategoriesLoading(true);
-      setCategoriesError(null);
-      try {
-        const res = await fetch("/api/categories");
-        if (!res.ok) throw new Error("Failed to fetch categories");
-        const data = await res.json();
-        setCategories(data);
-      } catch (err: any) {
-        setCategoriesError(err.message || "Unknown error");
-      } finally {
-        setCategoriesLoading(false);
-      }
-    }
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    async function fetchStatusOptions() {
-      setStatusLoading(true);
-      setStatusError(null);
-      try {
-        const res = await fetch("/api/status-options");
-        if (!res.ok) throw new Error("Failed to fetch status options");
-        const data = await res.json();
-        setStatusOptions(data);
-      } catch (err: any) {
-        setStatusError(err.message || "Unknown error");
-      } finally {
-        setStatusLoading(false);
-      }
-    }
-    fetchStatusOptions();
-  }, []);
   const { user, accessToken } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
   const [updateMessage, setUpdateMessage] = useState("");
   const [newStatus, setNewStatus] = useState("");
 
-  const { data: complaints = [], isLoading: complaintsLoading, refetch, error: complaintsError } = useQuery<Complaint[]>({
+  const { data: complaints = [], isLoading: complaintsLoading, refetch } = useQuery<Complaint[]>({
     queryKey: ["/api/complaints"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/complaints", undefined, accessToken);
@@ -106,7 +47,8 @@ export default function OfficialDashboard() {
     enabled: !!user && (user.role === "official" || user.role === "admin"),
   });
 
-  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<ComplaintStats>({
+  // --- FIX: This query now correctly fetches live stats from your main backend ---
+  const { data: stats, isLoading: statsLoading } = useQuery<ComplaintStats>({
     queryKey: ["/api/analytics/stats"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/analytics/stats", undefined, accessToken);
@@ -114,7 +56,7 @@ export default function OfficialDashboard() {
       return res.json();
     },
     enabled: !!user && (user.role === "official" || user.role === "admin"),
-    placeholderData: { total: 0, byStatus: {}, byCategory: {}, byPriority: {}, overdue: 0, resolvedToday: 0, avgResolutionDays: 0 }
+    placeholderData: { total: 0, byStatus: {}, byPriority: {}, overdue: 0, resolvedToday: 0, avgResolutionDays: 0 }
   });
 
   const updateComplaintMutation = useMutation({
@@ -123,7 +65,6 @@ export default function OfficialDashboard() {
       if (!res.ok) throw new Error("Failed to update complaint status");
       return res.json();
     },
-    // --- FIX: Invalidate both queries to ensure all data refreshes ---
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/complaints"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/stats"] });
@@ -138,7 +79,6 @@ export default function OfficialDashboard() {
       if (!res.ok) throw new Error("Failed to add update message");
       return res.json();
     },
-    // --- FIX: Invalidate both queries to ensure all data refreshes ---
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/complaints"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/stats"] });
@@ -147,12 +87,16 @@ export default function OfficialDashboard() {
     onError: (error: Error) => toast({ title: "Failed to add update", description: error.message, variant: "destructive" }),
   });
 
+  // --- FIX: Filtering logic now uses the official's department ---
   const filteredComplaints = complaints.filter(complaint => {
     const matchesSearch = complaint.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           complaint.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || complaint.status === statusFilter;
-    const matchesCategory = categoryFilter === "all" || complaint.category === categoryFilter;
-    return matchesSearch && matchesStatus && matchesCategory;
+    
+    // Admins see all departments, officials only see their own.
+    const matchesDepartment = user?.role === 'admin' || (user?.role === 'official' && complaint.category === user.department);
+
+    return matchesSearch && matchesStatus && matchesDepartment;
   });
 
   const getStatusColor = (status: string) => {
@@ -225,22 +169,6 @@ export default function OfficialDashboard() {
           </div>
         </div>
 
-        {/* --- FIX: Re-added the debug/testing info block --- */}
-        <Card className="mb-4">
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-2">Debug Information</h3>
-            <div className="text-sm space-y-1">
-              <p>User: {user?.username} (Role: {user?.role})</p>
-              <p>Complaints Loading: {complaintsLoading ? "Yes" : "No"}</p>
-              <p>Complaints Count: {complaints.length}</p>
-              <p>Stats Loading: {statsLoading ? "Yes" : "No"}</p>
-              <p>Stats Count: {stats?.total ?? 'N/A'}</p>
-              {complaintsError && <p className="text-red-600">Complaints Error: {complaintsError.message}</p>}
-              {statsError && <p className="text-red-600">Stats Error: {statsError.message}</p>}
-            </div>
-          </CardContent>
-        </Card>
-
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
             <Card><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-gray-900">{statsLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : stats?.total ?? 0}</div><div className="text-sm text-gray-600">Total Active</div></CardContent></Card>
             <Card><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-red-600">{statsLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin"/> : stats?.byPriority?.high ?? 0}</div><div className="text-sm text-gray-600">High Priority</div></CardContent></Card>
@@ -259,30 +187,14 @@ export default function OfficialDashboard() {
                   <Input placeholder="Search complaints..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
                 </div>
               </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-full lg:w-48">
-                  <SelectValue placeholder={categoriesLoading ? "Loading..." : "All Categories"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categoriesLoading && <div className="p-2 text-gray-500">Loading...</div>}
-                  {categoriesError && <div className="p-2 text-red-500">{categoriesError}</div>}
-                  {!categoriesLoading && !categoriesError && categories.map((cat) => (
-                    <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full lg:w-48">
-                  <SelectValue placeholder={statusLoading ? "Loading..." : "All Status"} />
-                </SelectTrigger>
+                <SelectTrigger className="w-full lg:w-48"><SelectValue placeholder="All Status" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  {statusLoading && <div className="p-2 text-gray-500">Loading...</div>}
-                  {statusError && <div className="p-2 text-red-500">{statusError}</div>}
-                  {!statusLoading && !statusError && statusOptions.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>{status.displayLabel}</SelectItem>
-                  ))}
+                  <SelectItem value="submitted">New</SelectItem>
+                  <SelectItem value="in-progress">In Progress</SelectItem>
+                  <SelectItem value="under-review">Under Review</SelectItem>
+                  <SelectItem value="resolved">Resolved</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -370,9 +282,9 @@ export default function OfficialDashboard() {
                         <SelectTrigger><SelectValue placeholder="Select new status (optional)" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">No status change</SelectItem>
-                          {statusOptions.map((status) => (
-                            <SelectItem key={status.value} value={status.value}>{status.displayLabel}</SelectItem>
-                          ))}
+                          <SelectItem value="in-progress">In Progress</SelectItem>
+                          <SelectItem value="under-review">Under Review</SelectItem>
+                          <SelectItem value="resolved">Resolved</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
