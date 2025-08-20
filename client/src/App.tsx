@@ -30,10 +30,10 @@ function AppRouter() {
         <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/chatbot" element={<ProtectedRoute><ChatbotPage /></ProtectedRoute>} />
         <Route path="/complaint-map" element={<ProtectedRoute><ComplaintMapPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/profile/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
         <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
-        <Route path="/features" element={<FeaturesPage />} />
+        <Route path="/features" element={<ProtectedRoute><FeaturesPage /></ProtectedRoute>} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

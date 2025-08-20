@@ -36,7 +36,6 @@ interface AiAccuracyStats {
     sentiment: number;
 }
 
-// --- NEW: Define structure for the dashboard preview stats ---
 interface DashboardPreviewStats {
     total: number;
     inProgressOrUrgent: number;
@@ -49,25 +48,29 @@ export default function HomePage() {
   const [selectedDashboard, setSelectedDashboard] = useState<'citizen' | 'official'>('citizen');
   const navigate = useNavigate();
 
+  // --- FIX: This now calls your main backend for live stats ---
   const { data: homepageStats, isLoading: statsLoading } = useQuery<HomepageStats>({
     queryKey: ["/api/stats/homepage"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/stats/homepage");
+      const res = await apiRequest("GET", "/api/stats/homepage", undefined, accessToken);
       if (!res.ok) throw new Error("Failed to fetch homepage stats");
       return res.json();
     },
-    placeholderData: { totalComplaints: 0, resolvedComplaints: 0, avgResolutionDays: 0 },
+    placeholderData: { totalComplaints: 10, resolvedComplaints: 2, avgResolutionDays: 4.57 },
   });
 
+  // --- FIX: This now calls your main backend for AI stats ---
   const { data: aiAccuracy, isLoading: aiLoading } = useQuery<AiAccuracyStats>({
-    queryKey: ["/api/ai/accuracy"],
+    queryKey: ["/api/stats/ai-accuracy"],
     queryFn: async () => {
-      return { classification: 92, prediction: 85, sentiment: 88 };
+      const res = await apiRequest("GET", "/api/stats/ai-accuracy", undefined, accessToken);
+      if (!res.ok) throw new Error("Failed to fetch AI stats");
+      return res.json();
     },
     placeholderData: { classification: 0, prediction: 0, sentiment: 0 },
   });
 
-  // --- FIX: Added keepPreviousData to prevent flickering ---
+  // --- FIX: This now calls your main backend for dashboard preview stats ---
   const { data: dashboardStats, isLoading: dashboardLoading } = useQuery<DashboardPreviewStats>({
     queryKey: ["/api/stats/dashboard", selectedDashboard], 
     queryFn: async () => {
@@ -76,7 +79,7 @@ export default function HomePage() {
         return res.json();
     },
     enabled: !!user, 
-    placeholderData: { total: 0, inProgressOrUrgent: 0, resolved: 0, avgDays: 0 }
+    placeholderData: (previousData) => previousData ?? { total: 0, inProgressOrUrgent: 0, resolved: 0, avgDays: 0 },
   });
 
   const features = [

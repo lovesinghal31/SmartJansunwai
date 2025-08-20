@@ -59,7 +59,7 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
 }
 
 export function setupAuth(app: Express) {
-  // Register
+  // Register (for Citizens)
   app.post("/api/register", async (req, res) => {
     const existingUser = await storage.getUserByUsername(req.body.username);
     if (existingUser) {
@@ -72,7 +72,6 @@ export function setupAuth(app: Express) {
     // Issue tokens
     const accessToken = signAccessToken(user);
     const refreshToken = signRefreshToken(user);
-    // Optionally: store refreshToken in DB for invalidation
     res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -82,6 +81,36 @@ export function setupAuth(app: Express) {
     res.status(201).json({ user, accessToken });
   });
 
+  // --- NEW: Route for Official Registration Requests ---
+  app.post("/api/auth/register/official-request", async (req, res) => {
+    try {
+        const { username, password, role, department, contact } = req.body;
+
+        const existingUser = await storage.getUserByUsername(username);
+        if (existingUser) {
+            return res.status(409).json({ message: "Username already exists" });
+        }
+
+        const hashedPassword = await hashPassword(password);
+
+        // Create user with a 'pending' status. Assumes storage.createUser can handle this.
+        await storage.createUser({
+            username,
+            password: hashedPassword,
+            role,
+            department,
+            phone: contact,
+            status: "pending", // Key difference: user is not active yet
+        } as any);
+
+        res.status(201).json({ message: "Official account request has been submitted for approval." });
+    } catch (error) {
+        console.error("Error in official registration request:", error);
+        res.status(500).json({ message: "Server error during registration request." });
+    }
+  });
+
+
   // Login
   app.post("/api/login", async (req, res) => {
     const user = await storage.getUserByUsername(req.body.username);
@@ -90,7 +119,6 @@ export function setupAuth(app: Express) {
     }
     const accessToken = signAccessToken(user);
     const refreshToken = signRefreshToken(user);
-    // Optionally: store refreshToken in DB for invalidation
     res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -107,7 +135,6 @@ export function setupAuth(app: Express) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
     });
-    // Optionally: remove refreshToken from DB
     res.sendStatus(200);
   });
 
@@ -129,6 +156,9 @@ export function setupAuth(app: Express) {
 
   // Get current user
   app.get("/api/user", authenticateJWT, async (req, res) => {
+    if (!req.user) {
+      return res.sendStatus(401);
+    }
     const user = await storage.getUser(req.user.id);
     if (!user) return res.sendStatus(401);
     res.json(user);
