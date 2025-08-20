@@ -203,6 +203,11 @@ export default function AuthPage() {
             <div className="w-12 h-12 bg-primary-800 rounded-full flex items-center justify-center">
               <img src="/logo.png" alt="Samadhan+ Logo" className="p-1"/>
             </div>
+            <img
+              src="/beat.png"
+              alt="Beat Logo"
+              className="w-10 h-10 object-contain mr-2"
+            />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Samadhan+</h1>
               <p className="text-sm text-gray-600">Indore Smart City</p>
